@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KiCloud 分享文件下载</title>
+    <link rel="stylesheet" href="/css/theme.css">
+    <link rel="stylesheet" href="/css/base.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/pages.css">
+    <script src="/js/app.js"></script>
+</head>
+<body>
+<div class="container download-shell">
+    <section class="download-card surface download-width">
+        <div class="page-header">
+            <div>
+                <div class="section-eyebrow">Shared file</div>
+                <h1 class="section-title">分享文件下载</h1>
+            </div>
+            <button class="theme-toggle" type="button" data-theme-toggle>
+                <span class="theme-toggle-icon" data-theme-icon aria-hidden="true"></span>
+                <span class="sr-only" data-theme-label>切换主题</span>
+            </button>
+        </div>
+
+        <div id="message" class="status-message page-stack-gap" th:text="${downloadError}"></div>
+
+        <div id="content" th:if="${linkAvailable}">
+            <div class="summary">
+                <div class="summary-item">
+                    <span class="summary-label">文件名称</span>
+                    <div class="summary-value" id="file-name" th:text="${linkData.fileName}">-</div>
+                </div>
+                <div class="summary-grid">
+                    <div class="summary-item">
+                        <span class="summary-label">文件大小</span>
+                        <div class="summary-value" id="file-size" th:text="${linkData.fileSize}">-</div>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">分享者</span>
+                        <div class="summary-value" id="owner-name" th:text="${linkData.ownerName}">-</div>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">创建时间</span>
+                        <div class="summary-value" id="created-at" th:text="${linkData.createdAt}">-</div>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">下载次数</span>
+                        <div class="summary-value" id="download-times" th:text="${linkData.downloadTimes}">-</div>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">访问状态</span>
+                        <div class="summary-value">
+                            <span id="password-status" class="status-badge"
+                                  th:classappend="${linkData.hasPassword} ? ' locked' : ' open'"
+                                  th:text="${linkData.hasPassword} ? '需要密码' : '无密码'">无密码</span>
+                        </div>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">分享标识</span>
+                        <div class="summary-value" id="link-id" th:text="${linkData.linkId}">-</div>
+                    </div>
+                </div>
+            </div>
+
+            <form id="download-form" th:action="@{'/link/' + ${linkId} + '/download'}" method="post" class="stack-form section-gap-lg">
+                <div id="password-field" th:classappend="${linkData.hasPassword} ? '' : ' hidden'">
+                    <label for="password-input">分享密码</label>
+                    <input id="password-input" name="password" type="text" autocomplete="off" placeholder="请输入分享密码"
+                           th:value="${presetPassword}" th:attr="required=${linkData.hasPassword}">
+                    <div class="meta">已带密码参数时可直接下载。</div>
+                </div>
+
+                <div class="actions">
+                    <button id="download-button" class="primary-button" type="submit">下载文件</button>
+                    <a class="button-link" href="/user/login">用户登录</a>
+                </div>
+            </form>
+        </div>
+
+        <div class="empty-state" th:if="${!linkAvailable}">
+            <div class="status-message error error-inline">分享链接不存在、已删除，或分享文件已失效。</div>
+            <div class="meta">请确认分享地址是否正确，或联系分享者重新生成链接。</div>
+        </div>
+    </section>
+</div>
+
+<script th:inline="javascript">
+    const initialError = /*[[${downloadError}]]*/ '';
+    const initialFileSize = /*[[${linkAvailable ? linkData.fileSize : null}]]*/ null;
+    const initialCreatedAt = /*[[${linkAvailable ? linkData.createdAt : ''}]]*/ '';
+    const hasPassword = /*[[${linkAvailable ? linkData.hasPassword : false}]]*/ false;
+    const messageBox = document.getElementById('message');
+    const passwordInput = document.getElementById('password-input');
+    const downloadForm = document.getElementById('download-form');
+    const downloadButton = document.getElementById('download-button');
+    const fileSize = document.getElementById('file-size');
+    const createdAt = document.getElementById('created-at');
+    const { formatSize, formatTime, setMessage } = window.KiCloudApp;
+
+    if (fileSize) {
+        fileSize.textContent = formatSize(initialFileSize);
+    }
+    if (createdAt) {
+        createdAt.textContent = formatTime(initialCreatedAt);
+    }
+
+    if (messageBox) {
+        if (initialError) {
+            setMessage(messageBox, initialError, 'error');
+        } else if (hasPassword) {
+            setMessage(messageBox, passwordInput && passwordInput.value ? '已自动填充访问密码，请确认后下载。' : '该分享链接已启用密码保护，请输入访问密码后下载。', passwordInput && passwordInput.value ? 'success' : 'info');
+        } else {
+            setMessage(messageBox, '该分享链接无需密码，可直接下载文件。', 'success');
+        }
+    }
+
+    if (passwordInput && hasPassword && !passwordInput.value) {
+        passwordInput.focus();
+    }
+
+    if (downloadForm && downloadButton) {
+        downloadForm.addEventListener('submit', () => {
+            downloadButton.disabled = true;
+            downloadButton.textContent = '正在下载...';
+        });
+    }
+</script>
+</body>
+</html>

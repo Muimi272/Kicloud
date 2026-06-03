@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KiCloud 注册</title>
+    <link rel="stylesheet" href="/css/theme.css">
+    <link rel="stylesheet" href="/css/base.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/pages.css">
+    <script src="/js/app.js"></script>
+</head>
+<body>
+<div class="page-shell auth-page auth-page-centered">
+    <section class="auth-card surface auth-card-centered">
+        <div class="auth-header">
+            <div>
+                <div class="section-eyebrow">Invitation Only</div>
+                <div class="brand-mark auth-brand">KiCloud</div>
+                <h2 class="section-title">注册 KiCloud</h2>
+                <p class="subtitle">使用邀请码创建账户，注册成功后再前往登录页完成登录。</p>
+            </div>
+            <button class="theme-toggle" type="button" data-theme-toggle>
+                <span class="theme-toggle-icon" data-theme-icon aria-hidden="true"></span>
+                <span class="sr-only" data-theme-label>切换主题</span>
+            </button>
+        </div>
+
+        <form id="register-form" class="auth-form">
+            <div>
+                <label for="invitationCode">邀请码</label>
+                <input id="invitationCode" name="invitationCode" type="text" placeholder="请输入邀请码" required>
+            </div>
+
+            <div>
+                <label for="username">用户名</label>
+                <input id="username" name="username" type="text" autocomplete="username" placeholder="请输入用户名" required>
+            </div>
+
+            <div>
+                <label for="password">密码</label>
+                <input id="password" name="password" type="password" autocomplete="new-password" placeholder="请输入密码" required>
+            </div>
+
+            <button class="primary-button" id="submit-button" type="submit">创建账户</button>
+        </form>
+
+        <div id="message" class="status-message message-top-gap"></div>
+
+        <div class="auth-actions">
+            <div class="helper-text">已有账号？返回登录页继续使用。</div>
+            <a class="button-link" href="/user/login">前往登录</a>
+        </div>
+
+        <div class="hint hint-block">
+            注册成功后可返回登录页继续使用。
+        </div>
+    </section>
+</div>
+
+<script>
+    const form = document.getElementById('register-form');
+    const invitationCodeInput = document.getElementById('invitationCode');
+    const usernameInput = document.getElementById('username');
+    const passwordInput = document.getElementById('password');
+    const submitButton = document.getElementById('submit-button');
+    const messageBox = document.getElementById('message');
+    const { setMessage, requestJson } = window.KiCloudApp;
+
+    form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        setMessage(messageBox, '', '');
+        submitButton.disabled = true;
+
+        const invitationCode = invitationCodeInput.value.trim();
+        const username = usernameInput.value.trim();
+        const password = passwordInput.value;
+
+        if (!invitationCode) {
+            setMessage(messageBox, '请输入邀请码。', 'error');
+            submitButton.disabled = false;
+            return;
+        }
+
+        if (!username) {
+            setMessage(messageBox, '请输入用户名。', 'error');
+            submitButton.disabled = false;
+            return;
+        }
+
+        if (!password) {
+            setMessage(messageBox, '请输入密码。', 'error');
+            submitButton.disabled = false;
+            return;
+        }
+
+        try {
+            const result = await requestJson('/user/register', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ invitationCode, username, password })
+            });
+
+            if (result.code === 1) {
+                setMessage(messageBox, result.msg || '注册成功。', 'success');
+                form.reset();
+                return;
+            }
+
+            setMessage(messageBox, result.msg || '注册失败。', 'error');
+        } catch (error) {
+            setMessage(messageBox, '请求失败。', 'error');
+        } finally {
+            submitButton.disabled = false;
+        }
+    });
+</script>
+</body>
+</html>

@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KiCloud 页面错误</title>
+    <link rel="stylesheet" href="/css/theme.css">
+    <link rel="stylesheet" href="/css/base.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/pages.css">
+    <script src="/js/app.js" defer></script>
+</head>
+<body>
+<div class="forbidden-shell">
+    <section class="forbidden-card surface">
+        <div class="section-eyebrow">Application Error</div>
+        <h1 class="section-title hero-title-compact">页面发生错误</h1>
+        <p class="subtitle centered-copy">
+            请求没有被正常处理，请稍后重试或返回首页继续使用。
+        </p>
+
+        <div class="metric section-gap-lg" th:text="${status ?: 500}">500</div>
+        <div class="meta section-gap-lg">页面发生错误</div>
+
+        <div class="actions actions-centered section-gap-lg">
+            <a class="primary-button" href="/dashboard">返回用户首页</a>
+            <a class="button-link" href="/user/login">返回登录页</a>
+            <button class="theme-toggle" type="button" data-theme-toggle>
+                <span class="theme-toggle-icon" data-theme-icon aria-hidden="true"></span>
+                <span class="sr-only" data-theme-label>切换主题</span>
+            </button>
+        </div>
+    </section>
+</div>
+</body>
+</html>

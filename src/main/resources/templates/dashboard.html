@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KiCloud Dashboard</title>
+    <link rel="stylesheet" href="/css/theme.css">
+    <link rel="stylesheet" href="/css/base.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/pages.css">
+    <script src="/js/app.js"></script>
+</head>
+<body>
+<div class="top-shell">
+    <header class="top-nav surface" data-mobile-collapsible data-mobile-open="false" data-mobile-breakpoint="1120px">
+        <div class="top-nav-brand-row">
+            <div class="top-nav-brand">
+                <div class="section-eyebrow">Workspace</div>
+                <div class="brand-mark">KiCloud</div>
+            </div>
+            <div class="top-nav-quick-actions">
+                <button class="theme-toggle" type="button" data-theme-toggle>
+                    <span class="theme-toggle-icon" data-theme-icon aria-hidden="true"></span>
+                    <span class="sr-only" data-theme-label>切换主题</span>
+                </button>
+                <button class="mobile-icon-toggle mobile-nav-toggle" type="button" data-mobile-collapse-button aria-label="展开控制台导航" title="展开控制台导航">
+                    <span class="mobile-icon-toggle-mark" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" focusable="false">
+                            <path d="M5 8h14M5 12h14M5 16h14" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.8"/>
+                        </svg>
+                    </span>
+                    <span class="sr-only">展开控制台导航</span>
+                </button>
+            </div>
+        </div>
+        <div class="top-nav-mobile-panel" data-mobile-collapse-content>
+            <nav class="top-nav-tabs" aria-label="控制台导航">
+                <button class="top-tab active" data-panel-target="files-panel" type="button">文件管理</button>
+                <button class="top-tab" data-panel-target="shares-panel" type="button">分享管理</button>
+            </nav>
+            <div class="top-nav-actions">
+                <button class="secondary-button hidden" id="admin-button" type="button">管理员后台</button>
+                <button class="secondary-button" id="logout-button" type="button">退出登录</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="main-column">
+        <section class="dashboard-card surface">
+            <div class="page-header">
+                <div>
+                    <div class="section-eyebrow">Dashboard</div>
+                    <h1 class="section-title">KiCloud 云盘控制台</h1>
+                    <p class="subtitle">轻松管理您的文件</p>
+                </div>
+                <div class="page-meta-row">
+                    <div class="meta">剩余：<span id="storage-remaining">-</span></div>
+                    <div class="meta">已用：<span id="storage-used">-</span></div>
+                    <div class="meta">总量：<span id="storage-total">-</span></div>
+                </div>
+            </div>
+            <div id="message" class="status-message"></div>
+        </section>
+
+        <section class="panel active" id="files-panel">
+            <section class="dashboard-card surface">
+                <div class="toolbar-cluster">
+                    <section class="toolbar-card toolbar-card-inline" data-mobile-collapsible data-mobile-open="false">
+                        <button class="mobile-section-toggle" type="button" data-mobile-collapse-button>
+                            <span class="toolbar-title">上传文件</span>
+                            <span class="mobile-collapse-chevron" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" focusable="false">
+                                    <path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"/>
+                                </svg>
+                            </span>
+                        </button>
+                        <div class="mobile-section-content" data-mobile-collapse-content>
+                            <form id="upload-form" class="stack-form">
+                                <input id="upload-file" name="file" type="file" required>
+                                <button class="primary-button" id="upload-button" type="submit">上传到当前目录</button>
+                            </form>
+                        </div>
+                    </section>
+
+                    <section class="toolbar-card toolbar-card-inline" data-mobile-collapsible data-mobile-open="false">
+                        <button class="mobile-section-toggle" type="button" data-mobile-collapse-button>
+                            <span class="toolbar-title">新建文件夹</span>
+                            <span class="mobile-collapse-chevron" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" focusable="false">
+                                    <path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"/>
+                                </svg>
+                            </span>
+                        </button>
+                        <div class="mobile-section-content" data-mobile-collapse-content>
+                            <form id="folder-form" class="stack-form">
+                                <input id="folder-name" name="name" type="text" placeholder="请输入文件夹名" required>
+                                <button class="primary-button" id="folder-button" type="submit">创建文件夹</button>
+                            </form>
+                        </div>
+                    </section>
+
+                    <section class="toolbar-card toolbar-card-search" data-mobile-collapsible data-mobile-open="false">
+                        <button class="mobile-section-toggle" type="button" data-mobile-collapse-button>
+                            <span class="toolbar-title">搜索文件</span>
+                            <span class="mobile-collapse-chevron" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" focusable="false">
+                                    <path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"/>
+                                </svg>
+                            </span>
+                        </button>
+                        <div class="mobile-section-content" data-mobile-collapse-content>
+                            <form id="search-form" class="stack-form">
+                                <input id="search-keyword" name="keyword" type="text" placeholder="按名称搜索">
+                                <div class="actions">
+                                    <button class="secondary-button" id="search-button" type="submit">搜索</button>
+                                    <button class="secondary-button" id="refresh-button" type="button">刷新当前目录</button>
+                                </div>
+                            </form>
+                        </div>
+                    </section>
+                </div>
+            </section>
+
+            <section class="content-card surface">
+                <div class="page-header">
+                    <div>
+                        <h2 class="panel-title">文件列表</h2>
+                    </div>
+                </div>
+
+                <div class="path-bar" id="path-bar"></div>
+                <div class="meta meta-bottom-gap" id="directory-meta"></div>
+                <div id="file-list-container"></div>
+            </section>
+        </section>
+
+        <section class="panel" id="shares-panel">
+            <section class="content-card surface">
+                <div class="page-header">
+                    <div>
+                        <div class="section-eyebrow">Share Center</div>
+                        <h2 class="panel-title">分享链接管理</h2>
+                    </div>
+                    <div class="nav-actions">
+                        <button class="secondary-button" id="refresh-links-button" type="button">刷新列表</button>
+                    </div>
+                </div>
+                <div id="share-message" class="status-message section-gap-md"></div>
+                <div id="link-list-container"></div>
+            </section>
+        </section>
+    </main>
+</div>
+
+<div class="modal-overlay" id="share-modal-overlay">
+    <div class="modal surface">
+        <div class="page-header page-stack-gap">
+            <div>
+                <h2 class="toolbar-title">生成分享链接</h2>
+                <p class="meta" id="share-modal-file-name">请选择要分享的文件。</p>
+            </div>
+            <button class="secondary-button" id="close-share-modal" type="button">关闭</button>
+        </div>
+
+        <div class="stack-form">
+            <div>
+                <label for="share-file-id">文件 ID</label>
+                <input id="share-file-id" type="text" readonly>
+            </div>
+
+            <div>
+                <div class="inline-check">
+                    <label for="share-enable-password">启用密码保护</label>
+                    <input id="share-enable-password" type="checkbox">
+                </div>
+            </div>
+
+            <div class="hidden" id="share-password-field">
+                <label for="share-password-input">分享密码</label>
+                <input id="share-password-input" type="password" placeholder="请输入分享密码">
+                <div class="meta">启用后，访问者下载时需要输入该密码。</div>
+            </div>
+
+            <div class="modal-actions">
+                <button class="primary-button" id="generate-share-button" type="button">生成分享链接</button>
+            </div>
+        </div>
+
+        <div class="modal-result" id="share-modal-result">
+            <div class="meta" id="share-modal-result-tip"></div>
+            <a class="share-output" id="share-modal-result-url" href="#" target="_blank" rel="noopener noreferrer"></a>
+            <div class="modal-result-actions">
+                <button class="secondary-button" id="copy-share-button" type="button">复制链接</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="action-modal-overlay">
+    <div class="modal surface action-modal">
+        <div class="page-header page-stack-gap">
+            <div>
+                <h2 class="toolbar-title" id="action-modal-title">操作确认</h2>
+                <p class="meta" id="action-modal-description">请确认本次操作。</p>
+            </div>
+            <button class="secondary-button modal-close-button" id="close-action-modal" type="button" aria-label="关闭" title="关闭">
+                <span class="modal-close-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" focusable="false">
+                        <path d="M6 6 18 18M18 6 6 18" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.9"/>
+                    </svg>
+                </span>
+                <span class="sr-only">关闭</span>
+            </button>
+        </div>
+
+        <form class="stack-form" id="action-modal-form">
+            <div class="hidden" id="action-modal-input-group">
+                <label for="action-modal-input" id="action-modal-label">输入内容</label>
+                <input id="action-modal-input" type="text" autocomplete="off">
+            </div>
+
+            <div class="status-message" id="action-modal-message"></div>
+
+            <div class="modal-actions">
+                <button class="secondary-button" id="cancel-action-modal" type="button">取消</button>
+                <button class="primary-button" id="confirm-action-modal" type="submit">确认</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    const adminButton = document.getElementById('admin-button');
+    const logoutButton = document.getElementById('logout-button');
+    const shareModalOverlay = document.getElementById('share-modal-overlay');
+    const closeShareModalButton = document.getElementById('close-share-modal');
+    const shareModalFileName = document.getElementById('share-modal-file-name');
+    const shareFileIdInput = document.getElementById('share-file-id');
+    const shareEnablePassword = document.getElementById('share-enable-password');
+    const sharePasswordField = document.getElementById('share-password-field');
+    const sharePasswordInput = document.getElementById('share-password-input');
+    const generateShareButton = document.getElementById('generate-share-button');
+    const shareModalResult = document.getElementById('share-modal-result');
+    const shareModalResultTip = document.getElementById('share-modal-result-tip');
+    const shareModalResultUrl = document.getElementById('share-modal-result-url');
+    const copyShareButton = document.getElementById('copy-share-button');
+    const actionModalOverlay = document.getElementById('action-modal-overlay');
+    const closeActionModalButton = document.getElementById('close-action-modal');
+    const cancelActionModalButton = document.getElementById('cancel-action-modal');
+    const actionModalForm = document.getElementById('action-modal-form');
+    const actionModalTitle = document.getElementById('action-modal-title');
+    const actionModalDescription = document.getElementById('action-modal-description');
+    const actionModalInputGroup = document.getElementById('action-modal-input-group');
+    const actionModalLabel = document.getElementById('action-modal-label');
+    const actionModalInput = document.getElementById('action-modal-input');
+    const actionModalMessage = document.getElementById('action-modal-message');
+    const confirmActionModalButton = document.getElementById('confirm-action-modal');
+    const uploadForm = document.getElementById('upload-form');
+    const uploadFileInput = document.getElementById('upload-file');
+    const uploadButton = document.getElementById('upload-button');
+    const folderForm = document.getElementById('folder-form');
+    const folderNameInput = document.getElementById('folder-name');
+    const folderButton = document.getElementById('folder-button');
+    const searchForm = document.getElementById('search-form');
+    const searchKeywordInput = document.getElementById('search-keyword');
+    const refreshButton = document.getElementById('refresh-button');
+    const refreshLinksButton = document.getElementById('refresh-links-button');
+    const messageBox = document.getElementById('message');
+    const shareMessageBox = document.getElementById('share-message');
+    const pathBar = document.getElementById('path-bar');
+    const directoryMeta = document.getElementById('directory-meta');
+    const fileListContainer = document.getElementById('file-list-container');
+    const linkListContainer = document.getElementById('link-list-container');
+    const storageUsed = document.getElementById('storage-used');
+    const storageTotal = document.getElementById('storage-total');
+    const storageRemaining = document.getElementById('storage-remaining');
+    const panelButtons = document.querySelectorAll('[data-panel-target]');
+
+    const { buildShareUrl, copyText, formatSize, formatTime, requestJson, setMessage, syncMobileCollapsibles } = window.KiCloudApp;
+    let currentParentId = null;
+    const folderPath = [{ id: null, name: '根目录' }];
+    let hasLoadedLinks = false;
+    const actionModalState = { onConfirm: null };
+
+    function activatePanel(panelId) {
+        document.querySelectorAll('.panel').forEach((panel) => {
+            panel.classList.toggle('active', panel.id === panelId);
+        });
+        panelButtons.forEach((button) => {
+            button.classList.toggle('active', button.getAttribute('data-panel-target') === panelId);
+        });
+        if (panelId === 'shares-panel' && !hasLoadedLinks) {
+            loadLinks();
+        }
+    }
+
+    function syncAdminAccess(role) {
+        const isAdmin = role === 'ADMIN' || role === 'SUPERADMIN';
+        adminButton.classList.toggle('hidden', !isAdmin);
+    }
+
+    function toggleSharePasswordField(enabled) {
+        sharePasswordField.classList.toggle('hidden', !enabled);
+        sharePasswordInput.required = enabled;
+        if (!enabled) {
+            sharePasswordInput.value = '';
+        }
+    }
+
+    function resetShareModal() {
+        shareEnablePassword.checked = false;
+        toggleSharePasswordField(false);
+        shareModalResult.classList.remove('active');
+        shareModalResultTip.textContent = '';
+        shareModalResultUrl.textContent = '';
+        shareModalResultUrl.href = '#';
+    }
+
+    function syncModalBodyState() {
+        document.body.classList.toggle(
+            'modal-open',
+            shareModalOverlay.classList.contains('active') || actionModalOverlay.classList.contains('active')
+        );
+    }
+
+    function openShareModal(fileId, fileName) {
+        shareFileIdInput.value = fileId;
+        shareModalFileName.textContent = `当前文件：${fileName}`;
+        resetShareModal();
+        shareModalOverlay.classList.add('active');
+        syncModalBodyState();
+    }
+
+    function closeShareModal() {
+        shareModalOverlay.classList.remove('active');
+        resetShareModal();
+        syncModalBodyState();
+    }
+
+    function openActionModal(options) {
+        actionModalState.onConfirm = options.onConfirm || null;
+        actionModalTitle.textContent = options.title || '操作确认';
+        actionModalDescription.textContent = options.description || '';
+        actionModalInputGroup.classList.toggle('hidden', !options.withInput);
+        actionModalLabel.textContent = options.label || '输入内容';
+        actionModalInput.value = options.defaultValue || '';
+        actionModalInput.type = options.inputType || 'text';
+        actionModalInput.placeholder = options.placeholder || '';
+        actionModalInput.required = Boolean(options.withInput);
+        actionModalInput.autocomplete = options.inputType === 'password' ? 'new-password' : 'off';
+        confirmActionModalButton.textContent = options.confirmText || '确认';
+        confirmActionModalButton.className = options.confirmVariant === 'danger' ? 'danger-button' : 'primary-button';
+        confirmActionModalButton.id = 'confirm-action-modal';
+        setMessage(actionModalMessage, '', '');
+        actionModalOverlay.classList.add('active');
+        syncModalBodyState();
+        window.requestAnimationFrame(() => {
+            if (options.withInput) {
+                actionModalInput.focus();
+                if (options.selectInput) {
+                    actionModalInput.select();
+                }
+                return;
+            }
+            confirmActionModalButton.focus();
+        });
+    }
+
+    function closeActionModal() {
+        actionModalOverlay.classList.remove('active');
+        actionModalState.onConfirm = null;
+        actionModalForm.reset();
+        actionModalInputGroup.classList.add('hidden');
+        setMessage(actionModalMessage, '', '');
+        syncModalBodyState();
+    }
+
+    function showShareResult(link, rawPassword) {
+        const fullUrl = buildShareUrl(link);
+        shareModalResult.classList.add('active');
+        shareModalResultUrl.textContent = fullUrl;
+        shareModalResultUrl.href = fullUrl;
+        shareModalResultTip.textContent = rawPassword ? `分享链接已生成。请保存好访问密码：${rawPassword}` : '分享链接已生成。当前链接未启用密码保护。';
+    }
+
+    function updatePathBar() {
+        pathBar.innerHTML = '';
+        folderPath.forEach((item, index) => {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'path-item';
+            button.textContent = item.name;
+            button.disabled = index === folderPath.length - 1;
+            button.addEventListener('click', () => {
+                folderPath.splice(index + 1);
+                loadDirectory(item.id);
+            });
+            pathBar.appendChild(button);
+        });
+    }
+
+    function updateStorageSummary(storage) {
+        const usedSpace = storage?.usedSpace ?? 0;
+        const totalSpace = storage?.totalSpace ?? 0;
+        const remainingSpace = storage?.remainingSpace ?? Math.max(0, totalSpace - usedSpace);
+        storageUsed.textContent = formatSize(usedSpace);
+        storageTotal.textContent = formatSize(totalSpace);
+        storageRemaining.textContent = formatSize(remainingSpace);
+    }
+
+    function renderFiles(files, source) {
+        updatePathBar();
+        directoryMeta.textContent = source === 'search' ? `搜索结果共 ${files.length} 项。当前目录 ID：${currentParentId ?? 'root'}` : `当前目录 ID：${currentParentId ?? 'root'}，共 ${files.length} 项。`;
+
+        if (!files.length) {
+            fileListContainer.innerHTML = '<div class="empty-state">当前没有文件或文件夹。</div>';
+            return;
+        }
+
+        const rows = files.map(file => {
+            const isFolder = file.fileType === 'FOLDER';
+            const nameCell = isFolder ? `<button type="button" class="folder-link" data-open-folder="${file.id}" data-folder-name="${encodeURIComponent(file.name)}">${file.name}</button>` : `<a class="download-link" href="/storage/download?id=${file.id}">${file.name}</a>`;
+            const actions = `
+                <div class="file-actions">
+                    ${isFolder ? `<button class="secondary-button" type="button" data-open-folder="${file.id}" data-folder-name="${encodeURIComponent(file.name)}">打开</button>` : `<a class="button-link" href="/storage/download?id=${file.id}">下载</a>`}
+                    ${isFolder ? '' : `<button class="secondary-button" type="button" data-share-id="${file.id}" data-share-name="${encodeURIComponent(file.name)}">分享</button>`}
+                    <button class="secondary-button" type="button" data-rename-id="${file.id}" data-current-name="${encodeURIComponent(file.name)}">重命名</button>
+                    <button class="danger-button" type="button" data-delete-id="${file.id}" data-current-name="${encodeURIComponent(file.name)}">删除</button>
+                </div>
+            `;
+            return `
+                <tr>
+                    <td data-label="名称" data-cell-primary="true">${nameCell}</td>
+                    <td data-label="类型">${isFolder ? '文件夹' : '文件'}</td>
+                    <td data-label="大小">${formatSize(file.size)}</td>
+                    <td data-label="创建时间">${formatTime(file.createdAt)}</td>
+                    <td data-label="操作">${actions}</td>
+                </tr>
+            `;
+        }).join('');
+
+        fileListContainer.innerHTML = `
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                    <tr>
+                        <th>名称</th>
+                        <th>类型</th>
+                        <th>大小</th>
+                        <th>创建时间</th>
+                        <th>操作</th>
+                    </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            </div>
+        `;
+    }
+
+    function renderLinks(links) {
+        if (!Array.isArray(links) || !links.length) {
+            linkListContainer.innerHTML = '<div class="empty-state">你还没有创建任何分享链接。请在文件列表中选择文件后生成分享。</div>';
+            return;
+        }
+
+        const rows = links.map(link => {
+            const fullUrl = buildShareUrl(link);
+            return `
+                <tr>
+                    <td data-label="ID" data-cell-primary="true">${link.id ?? '-'}</td>
+                    <td data-label="linkId">${link.linkId ?? '-'}</td>
+                    <td data-label="文件 ID">${link.storageFileId ?? '-'}</td>
+                    <td data-label="密码状态"><span class="status-badge ${link.hasPassword ? 'on' : 'off'}">${link.hasPassword ? '已加密' : '无密码'}</span></td>
+                    <td data-label="下载次数">${link.downloadTimes ?? 0}</td>
+                    <td data-label="创建时间">${formatTime(link.createdAt)}</td>
+                    <td data-label="分享地址"><a class="share-url" href="${fullUrl}" target="_blank" rel="noopener noreferrer">${fullUrl}</a></td>
+                    <td data-label="操作">
+                        <div class="link-actions">
+                            <button class="secondary-button" type="button" data-copy-link="${encodeURIComponent(fullUrl)}">复制</button>
+                            <a class="button-link" href="${fullUrl}" target="_blank" rel="noopener noreferrer">打开</a>
+                            <button class="danger-button" type="button" data-delete-link="${link.id}" data-link-id="${link.linkId}">删除</button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+
+        linkListContainer.innerHTML = `
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>linkId</th>
+                        <th>文件 ID</th>
+                        <th>密码状态</th>
+                        <th>下载次数</th>
+                        <th>创建时间</th>
+                        <th>分享地址</th>
+                        <th>操作</th>
+                    </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            </div>
+        `;
+    }
+
+    async function loadDirectory(parentId = null) {
+        currentParentId = parentId ?? null;
+        try {
+            const query = currentParentId === null ? '' : `?parentId=${currentParentId}`;
+            const result = await requestJson(`/storage/list${query}`);
+            if (result.code !== 1) {
+                setMessage(messageBox, result.msg || '目录加载失败。', 'error');
+                renderFiles([], 'list');
+                return;
+            }
+            syncAdminAccess(result.data?.owner?.role || '');
+            setMessage(messageBox, result.msg || '目录加载成功。', 'success');
+            updateStorageSummary(result.data.storage || null);
+            renderFiles(result.data.files || [], 'list');
+        } catch (error) {
+            setMessage(messageBox, '目录加载失败。', 'error');
+            renderFiles([], 'list');
+        }
+    }
+
+    async function loadLinks() {
+        try {
+            const result = await requestJson('/link/my');
+            if (result.code !== 1) {
+                setMessage(shareMessageBox, result.msg || '分享链接列表加载失败。', 'error');
+                renderLinks([]);
+                return;
+            }
+            hasLoadedLinks = true;
+            renderLinks(result.data?.links || []);
+            setMessage(shareMessageBox, result.msg || '分享链接列表加载成功。', 'success');
+        } catch (error) {
+            setMessage(shareMessageBox, '分享链接列表加载失败。', 'error');
+            renderLinks([]);
+        }
+    }
+
+    async function searchFiles(keyword) {
+        try {
+            const result = await requestJson(`/storage/search?keyword=${encodeURIComponent(keyword)}`);
+            if (result.code !== 1) {
+                setMessage(messageBox, result.msg || '搜索失败。', 'error');
+                return;
+            }
+            setMessage(messageBox, result.msg || '搜索成功。', 'success');
+            updateStorageSummary(result.data.storage || null);
+            renderFiles(result.data.files || [], 'search');
+        } catch (error) {
+            setMessage(messageBox, '搜索失败。', 'error');
+        }
+    }
+
+    async function uploadFile() {
+        const file = uploadFileInput.files[0];
+        if (!file) {
+            setMessage(messageBox, '请先选择要上传的文件。', 'error');
+            return;
+        }
+        const formData = new FormData();
+        formData.append('file', file);
+        if (currentParentId !== null) {
+            formData.append('parentId', currentParentId);
+        }
+        const result = await requestJson('/storage/upload', { method: 'POST', body: formData });
+        if (result.code !== 1) {
+            setMessage(messageBox, result.msg || '上传失败。', 'error');
+            return;
+        }
+        setMessage(messageBox, result.msg || '上传成功。', 'success');
+        uploadForm.reset();
+        await loadDirectory(currentParentId);
+    }
+
+    async function createFolder() {
+        const name = folderNameInput.value.trim();
+        if (!name) {
+            setMessage(messageBox, '请输入文件夹名称。', 'error');
+            return;
+        }
+        const result = await requestJson('/storage/folder', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, parentId: currentParentId })
+        });
+        if (result.code !== 1) {
+            setMessage(messageBox, result.msg || '创建文件夹失败。', 'error');
+            return;
+        }
+        setMessage(messageBox, result.msg || '创建文件夹成功。', 'success');
+        folderForm.reset();
+        await loadDirectory(currentParentId);
+    }
+
+    function renameFile(id, currentName) {
+        openActionModal({
+            title: '重命名文件',
+            description: `当前名称：${currentName}`,
+            label: '新名称',
+            placeholder: '请输入新的名称',
+            defaultValue: currentName,
+            confirmText: '保存名称',
+            withInput: true,
+            selectInput: true,
+            onConfirm: async (value) => {
+                const finalName = value.trim();
+                if (!finalName) {
+                    throw new Error('名称不能为空。');
+                }
+                const result = await requestJson('/storage/rename', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id, newName: finalName })
+                });
+                if (result.code !== 1) {
+                    throw new Error(result.msg || '重命名失败。');
+                }
+                setMessage(messageBox, result.msg || '重命名成功。', 'success');
+                await loadDirectory(currentParentId);
+            }
+        });
+    }
+
+    function deleteFile(id, currentName) {
+        openActionModal({
+            title: '删除文件',
+            description: `确认删除「${currentName}」吗？删除后将无法恢复。`,
+            confirmText: '确认删除',
+            confirmVariant: 'danger',
+            withInput: false,
+            onConfirm: async () => {
+                const result = await requestJson('/storage/delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id })
+                });
+                if (result.code !== 1) {
+                    throw new Error(result.msg || '删除失败。');
+                }
+                setMessage(messageBox, result.msg || '删除成功。', 'success');
+                await loadDirectory(currentParentId);
+            }
+        });
+    }
+
+    async function createShareLink() {
+        const storageFileId = Number(shareFileIdInput.value);
+        const usePassword = shareEnablePassword.checked;
+        const rawPassword = sharePasswordInput.value;
+        if (!storageFileId || storageFileId <= 0) {
+            setMessage(messageBox, '请选择合法的文件进行分享。', 'error');
+            return;
+        }
+        if (usePassword && !rawPassword.trim()) {
+            setMessage(messageBox, '启用密码保护后必须填写密码。', 'error');
+            return;
+        }
+        const result = await requestJson('/link/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ storageFileId, password: usePassword ? rawPassword : null })
+        });
+        if (result.code !== 1) {
+            setMessage(messageBox, result.msg || '生成分享链接失败。', 'error');
+            return;
+        }
+        setMessage(messageBox, result.msg || '生成分享链接成功。', 'success');
+        showShareResult(result.data?.link || null, usePassword ? rawPassword : '');
+        await loadLinks();
+    }
+
+    function deleteLink(id, linkId) {
+        openActionModal({
+            title: '删除分享链接',
+            description: `确认删除分享链接「${linkId}」吗？`,
+            confirmText: '确认删除',
+            confirmVariant: 'danger',
+            withInput: false,
+            onConfirm: async () => {
+                const result = await requestJson('/link/delete', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ id })
+                });
+
+                if (result.code !== 1) {
+                    throw new Error(result.msg || '删除分享链接失败。');
+                }
+
+                setMessage(shareMessageBox, result.msg || '删除分享链接成功。', 'success');
+                await loadLinks();
+            }
+        });
+    }
+
+    panelButtons.forEach((button) => {
+        button.addEventListener('click', () => activatePanel(button.getAttribute('data-panel-target')));
+    });
+    closeShareModalButton.addEventListener('click', closeShareModal);
+    closeActionModalButton.addEventListener('click', closeActionModal);
+    cancelActionModalButton.addEventListener('click', closeActionModal);
+    shareEnablePassword.addEventListener('change', () => { toggleSharePasswordField(shareEnablePassword.checked); });
+    actionModalForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        if (!actionModalState.onConfirm) {
+            return;
+        }
+        confirmActionModalButton.disabled = true;
+        closeActionModalButton.disabled = true;
+        cancelActionModalButton.disabled = true;
+        try {
+            await actionModalState.onConfirm(actionModalInput.value);
+            closeActionModal();
+        } catch (error) {
+            setMessage(actionModalMessage, error.message || '操作失败，请稍后重试。', 'error');
+        } finally {
+            confirmActionModalButton.disabled = false;
+            closeActionModalButton.disabled = false;
+            cancelActionModalButton.disabled = false;
+        }
+    });
+    generateShareButton.addEventListener('click', async () => {
+        generateShareButton.disabled = true;
+        try {
+            await createShareLink();
+        } catch (error) {
+            setMessage(messageBox, '生成分享链接失败。', 'error');
+        } finally {
+            generateShareButton.disabled = false;
+        }
+    });
+    copyShareButton.addEventListener('click', async () => {
+        const text = shareModalResultUrl.textContent.trim();
+        if (!text) {
+            return;
+        }
+        try {
+            await copyText(text);
+            setMessage(messageBox, '分享链接已复制。', 'success');
+        } catch (error) {
+            setMessage(messageBox, '复制失败，请手动复制链接。', 'error');
+        }
+    });
+    shareModalOverlay.addEventListener('click', (event) => {
+        if (event.target === shareModalOverlay) {
+            closeShareModal();
+        }
+    });
+    actionModalOverlay.addEventListener('click', (event) => {
+        if (event.target === actionModalOverlay) {
+            closeActionModal();
+        }
+    });
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && actionModalOverlay.classList.contains('active')) {
+            closeActionModal();
+            return;
+        }
+        if (event.key === 'Escape' && shareModalOverlay.classList.contains('active')) {
+            closeShareModal();
+        }
+    });
+    adminButton.addEventListener('click', () => { window.location.href = '/admin/back'; });
+    logoutButton.addEventListener('click', async () => {
+        setMessage(messageBox, '', '');
+        logoutButton.disabled = true;
+        try {
+            const result = await requestJson('/user/logout', { method: 'POST' });
+            if (result.code === 1) {
+                setMessage(messageBox, result.msg || '退出成功。', 'success');
+                window.location.href = '/user/login';
+                return;
+            }
+            setMessage(messageBox, result.msg || '退出失败。', 'error');
+        } catch (error) {
+            setMessage(messageBox, '请求失败。', 'error');
+        } finally {
+            logoutButton.disabled = false;
+        }
+    });
+    uploadForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        uploadButton.disabled = true;
+        try { await uploadFile(); } finally { uploadButton.disabled = false; }
+    });
+    folderForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        folderButton.disabled = true;
+        try { await createFolder(); } finally { folderButton.disabled = false; }
+    });
+    searchForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const keyword = searchKeywordInput.value.trim();
+        if (!keyword) {
+            await loadDirectory(currentParentId);
+            return;
+        }
+        await searchFiles(keyword);
+    });
+    refreshButton.addEventListener('click', async () => {
+        searchForm.reset();
+        await loadDirectory(currentParentId);
+    });
+    refreshLinksButton.addEventListener('click', async () => {
+        await loadLinks();
+    });
+    fileListContainer.addEventListener('click', async (event) => {
+        const openButton = event.target.closest('[data-open-folder]');
+        if (openButton) {
+            const folderId = Number(openButton.dataset.openFolder);
+            const folderName = decodeURIComponent(openButton.dataset.folderName);
+            const existingIndex = folderPath.findIndex(item => item.id === folderId);
+            if (existingIndex >= 0) {
+                folderPath.splice(existingIndex + 1);
+            } else {
+                folderPath.push({ id: folderId, name: folderName });
+            }
+            await loadDirectory(folderId);
+            return;
+        }
+        const shareActionButton = event.target.closest('[data-share-id]');
+        if (shareActionButton) {
+            openShareModal(Number(shareActionButton.dataset.shareId), decodeURIComponent(shareActionButton.dataset.shareName));
+            return;
+        }
+        const renameButton = event.target.closest('[data-rename-id]');
+        if (renameButton) {
+            await renameFile(Number(renameButton.dataset.renameId), decodeURIComponent(renameButton.dataset.currentName));
+            return;
+        }
+        const deleteButton = event.target.closest('[data-delete-id]');
+        if (deleteButton) {
+            await deleteFile(Number(deleteButton.dataset.deleteId), decodeURIComponent(deleteButton.dataset.currentName));
+        }
+    });
+    linkListContainer.addEventListener('click', async (event) => {
+        const copyButton = event.target.closest('[data-copy-link]');
+        if (copyButton) {
+            try {
+                await copyText(decodeURIComponent(copyButton.dataset.copyLink));
+                setMessage(shareMessageBox, '分享链接已复制。', 'success');
+            } catch (error) {
+                setMessage(shareMessageBox, '复制失败。', 'error');
+            }
+            return;
+        }
+
+        const deleteButton = event.target.closest('[data-delete-link]');
+        if (deleteButton) {
+            await deleteLink(Number(deleteButton.dataset.deleteLink), deleteButton.dataset.linkId);
+        }
+    });
+
+    toggleSharePasswordField(false);
+    syncMobileCollapsibles();
+    activatePanel('files-panel');
+    loadDirectory();
+</script>
+</body>
+</html>

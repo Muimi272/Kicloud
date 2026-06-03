@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KiCloud 分享链接管理</title>
+    <link rel="stylesheet" href="/css/theme.css">
+    <link rel="stylesheet" href="/css/base.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/pages.css">
+    <script src="/js/app.js"></script>
+</head>
+<body>
+<div class="app-layout">
+    <aside class="sidebar surface">
+        <div class="section-eyebrow">Workspace</div>
+        <div class="brand-mark">KiCloud</div>
+        <p class="muted">你的分享中心。</p>
+        <div class="sidebar-nav">
+            <button class="nav-item" id="dashboard-button" type="button">返回控制台</button>
+            <button class="nav-item active" type="button">分享链接管理</button>
+            <button class="nav-item" id="logout-button" type="button">退出登录</button>
+        </div>
+        <div class="theme-switch-row">
+            <button class="theme-toggle" type="button" data-theme-toggle>
+                <span class="theme-toggle-icon" data-theme-icon aria-hidden="true"></span>
+                <span class="sr-only" data-theme-label>切换主题</span>
+            </button>
+        </div>
+    </aside>
+
+    <main class="main-column">
+        <section class="share-card surface">
+            <div class="page-header">
+                <div>
+                    <div class="section-eyebrow">Share center</div>
+                    <h1 class="section-title">分享链接管理</h1>
+                </div>
+                <div class="nav-actions">
+                    <button class="secondary-button" id="refresh-links-button" type="button">刷新列表</button>
+                </div>
+            </div>
+
+            <div id="message" class="status-message page-stack-gap"></div>
+
+            <section class="content-card surface">
+                <div class="page-header">
+                    <div>
+                        <h2 class="panel-title">我的分享链接</h2>
+                    </div>
+                </div>
+                <div id="link-list-container"></div>
+            </section>
+        </section>
+    </main>
+</div>
+
+<div class="modal-overlay" id="action-modal-overlay">
+    <div class="modal surface action-modal">
+        <div class="page-header page-stack-gap">
+            <div>
+                <h2 class="toolbar-title">删除分享链接</h2>
+                <p class="meta" id="action-modal-description">请确认本次操作。</p>
+            </div>
+            <button class="secondary-button modal-close-button" id="close-action-modal" type="button" aria-label="关闭" title="关闭">
+                <span class="modal-close-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" focusable="false">
+                        <path d="M6 6 18 18M18 6 6 18" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.9"/>
+                    </svg>
+                </span>
+                <span class="sr-only">关闭</span>
+            </button>
+        </div>
+
+        <form class="stack-form" id="action-modal-form">
+            <div class="status-message" id="action-modal-message"></div>
+            <div class="modal-actions">
+                <button class="secondary-button" id="cancel-action-modal" type="button">取消</button>
+                <button class="danger-button" id="confirm-action-modal" type="submit">确认删除</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    const dashboardButton = document.getElementById('dashboard-button');
+    const logoutButton = document.getElementById('logout-button');
+    const refreshLinksButton = document.getElementById('refresh-links-button');
+    const linkListContainer = document.getElementById('link-list-container');
+    const messageBox = document.getElementById('message');
+    const actionModalOverlay = document.getElementById('action-modal-overlay');
+    const closeActionModalButton = document.getElementById('close-action-modal');
+    const cancelActionModalButton = document.getElementById('cancel-action-modal');
+    const actionModalForm = document.getElementById('action-modal-form');
+    const actionModalDescription = document.getElementById('action-modal-description');
+    const actionModalMessage = document.getElementById('action-modal-message');
+    const confirmActionModalButton = document.getElementById('confirm-action-modal');
+    const { buildShareUrl, copyText, formatTime, requestJson, setMessage } = window.KiCloudApp;
+    const actionModalState = { onConfirm: null };
+
+    function syncModalBodyState() {
+        document.body.classList.toggle('modal-open', actionModalOverlay.classList.contains('active'));
+    }
+
+    function renderLinks(links) {
+        if (!Array.isArray(links) || !links.length) {
+            linkListContainer.innerHTML = '<div class="empty-state">你还没有创建任何分享链接。请前往控制台文件列表创建。</div>';
+            return;
+        }
+
+        const rows = links.map(link => {
+            const fullUrl = buildShareUrl(link);
+            return `
+                <tr>
+                    <td>${link.id ?? '-'}</td>
+                    <td>${link.linkId ?? '-'}</td>
+                    <td>${link.storageFileId ?? '-'}</td>
+                    <td><span class="status-badge ${link.hasPassword ? 'on' : 'off'}">${link.hasPassword ? '已加密' : '无密码'}</span></td>
+                    <td>${link.downloadTimes ?? 0}</td>
+                    <td>${formatTime(link.createdAt)}</td>
+                    <td><a class="share-url" href="${fullUrl}" target="_blank" rel="noopener noreferrer">${fullUrl}</a></td>
+                    <td>
+                        <div class="link-actions">
+                            <button class="secondary-button" type="button" data-copy-link="${encodeURIComponent(fullUrl)}">复制</button>
+                            <a class="button-link" href="${fullUrl}" target="_blank" rel="noopener noreferrer">打开</a>
+                            <button class="danger-button" type="button" data-delete-link="${link.id}" data-link-id="${link.linkId}">删除</button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+
+        linkListContainer.innerHTML = `
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>linkId</th>
+                        <th>文件 ID</th>
+                        <th>密码状态</th>
+                        <th>下载次数</th>
+                        <th>创建时间</th>
+                        <th>分享地址</th>
+                        <th>操作</th>
+                    </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            </div>
+        `;
+    }
+
+    async function loadLinks() {
+        try {
+            const result = await requestJson('/link/my');
+            if (result.code !== 1) {
+                setMessage(messageBox, result.msg || '分享链接列表加载失败。', 'error');
+                renderLinks([]);
+                return;
+            }
+            renderLinks(result.data?.links || []);
+            setMessage(messageBox, result.msg || '分享链接列表加载成功。', 'success');
+        } catch (error) {
+            setMessage(messageBox, '分享链接列表加载失败。', 'error');
+            renderLinks([]);
+        }
+    }
+
+    function openActionModal(options) {
+        actionModalState.onConfirm = options.onConfirm || null;
+        actionModalDescription.textContent = options.description || '';
+        confirmActionModalButton.textContent = options.confirmText || '确认';
+        confirmActionModalButton.className = options.confirmVariant === 'danger' ? 'danger-button' : 'primary-button';
+        confirmActionModalButton.id = 'confirm-action-modal';
+        setMessage(actionModalMessage, '', '');
+        actionModalOverlay.classList.add('active');
+        syncModalBodyState();
+        window.requestAnimationFrame(() => confirmActionModalButton.focus());
+    }
+
+    function closeActionModal() {
+        actionModalOverlay.classList.remove('active');
+        actionModalState.onConfirm = null;
+        setMessage(actionModalMessage, '', '');
+        syncModalBodyState();
+    }
+
+    function deleteLink(id, linkId) {
+        openActionModal({
+            description: `确认删除分享链接「${linkId}」吗？`,
+            confirmText: '确认删除',
+            confirmVariant: 'danger',
+            onConfirm: async () => {
+                const result = await requestJson('/link/delete', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ id })
+                });
+
+                if (result.code !== 1) {
+                    throw new Error(result.msg || '删除分享链接失败。');
+                }
+
+                setMessage(messageBox, result.msg || '删除分享链接成功。', 'success');
+                await loadLinks();
+            }
+        });
+    }
+
+    dashboardButton.addEventListener('click', () => {
+        window.location.href = '/dashboard';
+    });
+
+    logoutButton.addEventListener('click', async () => {
+        setMessage(messageBox, '', '');
+        logoutButton.disabled = true;
+
+        try {
+            const result = await requestJson('/user/logout', {
+                method: 'POST'
+            });
+
+            if (result.code === 1) {
+                setMessage(messageBox, result.msg || '退出成功。', 'success');
+                window.location.href = '/user/login';
+                return;
+            }
+
+            setMessage(messageBox, result.msg || '退出失败。', 'error');
+        } catch (error) {
+            setMessage(messageBox, '请求失败。', 'error');
+        } finally {
+            logoutButton.disabled = false;
+        }
+    });
+
+    refreshLinksButton.addEventListener('click', async () => {
+        await loadLinks();
+    });
+    closeActionModalButton.addEventListener('click', closeActionModal);
+    cancelActionModalButton.addEventListener('click', closeActionModal);
+    actionModalForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        if (!actionModalState.onConfirm) {
+            return;
+        }
+        confirmActionModalButton.disabled = true;
+        closeActionModalButton.disabled = true;
+        cancelActionModalButton.disabled = true;
+        try {
+            await actionModalState.onConfirm();
+            closeActionModal();
+        } catch (error) {
+            setMessage(actionModalMessage, error.message || '操作失败，请稍后重试。', 'error');
+        } finally {
+            confirmActionModalButton.disabled = false;
+            closeActionModalButton.disabled = false;
+            cancelActionModalButton.disabled = false;
+        }
+    });
+    actionModalOverlay.addEventListener('click', (event) => {
+        if (event.target === actionModalOverlay) {
+            closeActionModal();
+        }
+    });
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && actionModalOverlay.classList.contains('active')) {
+            closeActionModal();
+        }
+    });
+
+    linkListContainer.addEventListener('click', async (event) => {
+        const copyButton = event.target.closest('[data-copy-link]');
+        if (copyButton) {
+            try {
+                await copyText(decodeURIComponent(copyButton.dataset.copyLink));
+                setMessage(messageBox, '分享链接已复制。', 'success');
+            } catch (error) {
+                setMessage(messageBox, '复制失败，请手动复制链接。', 'error');
+            }
+            return;
+        }
+
+        const deleteButton = event.target.closest('[data-delete-link]');
+        if (deleteButton) {
+            await deleteLink(Number(deleteButton.dataset.deleteLink), deleteButton.dataset.linkId);
+        }
+    });
+
+    loadLinks();
+</script>
+</body>
+</html>

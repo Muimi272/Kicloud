@@ -1,0 +1,420 @@
+.surface,
+.auth-card,
+.dashboard-card,
+.share-card,
+.sidebar,
+.content-card,
+.modal,
+.detail-card,
+.download-card,
+.forbidden-card,
+.table-wrap,
+.empty-state,
+.status-banner {
+    background: var(--bg-elevated);
+    border: 1px solid var(--line);
+    box-shadow: var(--shadow-soft);
+}
+
+.button,
+button,
+.primary-button,
+.secondary-button,
+.danger-button,
+.logout-button,
+.button-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 42px;
+    padding: 0 18px;
+    border-radius: 999px;
+    border: 1px solid transparent;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.button,
+.button-link,
+.primary-button,
+.secondary-button,
+.danger-button,
+.logout-button {
+    position: relative;
+    overflow: hidden;
+    transform-origin: center;
+    transition:
+        transform var(--transition-fast),
+        background-color var(--transition-fast),
+        border-color var(--transition-fast),
+        color var(--transition-fast),
+        box-shadow var(--transition-fast),
+        opacity var(--transition-fast),
+        filter var(--transition-fast);
+}
+
+.button:hover:not(:disabled),
+.button-link:hover,
+.primary-button:hover,
+.secondary-button:hover,
+.danger-button:hover,
+.logout-button:hover {
+    transform: translateY(-1px);
+    filter: saturate(1.05);
+}
+
+.button:active:not(:disabled),
+.button-link:active,
+.primary-button:active,
+.secondary-button:active,
+.danger-button:active,
+.logout-button:active {
+    transform: translateY(0) scale(0.98);
+}
+
+.button:focus-visible,
+.button-link:focus-visible,
+.primary-button:focus-visible,
+.secondary-button:focus-visible,
+.danger-button:focus-visible,
+.logout-button:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 4px var(--accent-soft), var(--shadow-soft);
+}
+
+.button-primary,
+.primary-button {
+    background: var(--accent-strong);
+    color: var(--bg);
+}
+
+.button-primary:hover,
+.primary-button:hover {
+    opacity: 0.92;
+    box-shadow: var(--shadow-hover);
+}
+
+.button-secondary,
+.secondary-button,
+.button-link {
+    background: var(--bg-strong);
+    color: var(--text);
+    border-color: var(--line);
+}
+
+.button-secondary:hover,
+.secondary-button:hover,
+.button-link:hover {
+    background: var(--bg-muted);
+    box-shadow: var(--shadow-soft);
+}
+
+.button-danger,
+.danger-button,
+.logout-button {
+    background: var(--danger-soft);
+    color: var(--danger);
+    border-color: color-mix(in srgb, var(--danger) 18%, var(--line));
+}
+
+.button-danger:hover,
+.danger-button:hover,
+.logout-button:hover {
+    background: color-mix(in srgb, var(--danger) 18%, var(--bg-strong));
+}
+
+.status-message {
+    min-height: 24px;
+    font-size: 14px;
+    color: var(--text-soft);
+}
+
+.status-message.success {
+    color: var(--success);
+}
+
+.status-message.error {
+    color: var(--danger);
+}
+
+.status-message.info {
+    color: var(--text-soft);
+}
+
+.muted,
+.meta,
+.subtitle,
+.helper-text,
+.panel-note,
+.hint {
+    color: var(--text-soft);
+    line-height: 1.7;
+}
+
+label {
+    display: block;
+    margin-bottom: 8px;
+    color: var(--text-soft);
+    font-size: 0.92rem;
+}
+
+.section-title {
+    margin-bottom: 10px;
+    font-size: clamp(2rem, 4vw, 2.6rem);
+    line-height: 1.14;
+}
+
+.section-eyebrow {
+    margin-bottom: 10px;
+    color: var(--text-faint);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+
+.theme-toggle {
+    width: 42px;
+    height: 42px;
+    min-width: 42px;
+    min-height: 42px;
+    padding: 0;
+    border: 1px solid var(--line);
+    background: var(--bg-strong);
+    color: var(--text);
+    flex-shrink: 0;
+    line-height: 0;
+}
+
+.theme-toggle-icon {
+    display: inline-flex;
+    width: 20px;
+    height: 20px;
+    transition: transform var(--transition-mid), opacity var(--transition-fast);
+}
+
+.theme-toggle-icon svg {
+    width: 20px;
+    height: 20px;
+}
+
+.theme-toggle:hover .theme-toggle-icon {
+    transform: rotate(12deg) scale(1.04);
+}
+
+.badge,
+.status-pill,
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 30px;
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    border: 1px solid var(--line);
+    background: var(--bg-muted);
+    color: var(--text-soft);
+}
+
+.status-pill.ok,
+.status-badge.open,
+.status-badge.off {
+    background: var(--success-soft);
+    color: var(--success);
+    border-color: transparent;
+}
+
+.status-pill.off,
+.status-badge.locked,
+.status-badge.on {
+    background: var(--danger-soft);
+    color: var(--danger);
+    border-color: transparent;
+}
+
+.status-pill.neutral {
+    background: var(--accent-ghost);
+    color: var(--text);
+    border-color: transparent;
+}
+
+.metric-card {
+    padding: 0;
+    border-radius: 0;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+}
+
+.metric-value,
+.storage-metric,
+.metric {
+    margin-bottom: 4px;
+    font-size: clamp(24px, 4vw, 34px);
+    line-height: 1;
+    color: var(--text);
+}
+
+.table-wrap {
+    overflow: auto;
+    border-radius: var(--radius-md);
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th,
+td {
+    padding: 16px 14px;
+    border-bottom: 1px solid var(--line);
+    text-align: left;
+    vertical-align: middle;
+}
+
+th {
+    color: var(--text-faint);
+    font-size: 0.76rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+tbody tr:last-child td {
+    border-bottom: none;
+}
+
+tbody tr:hover {
+    background: var(--bg-muted);
+}
+
+.link-button,
+.folder-link,
+.download-link {
+    color: var(--accent-strong);
+    text-decoration: none;
+    font-weight: 600;
+    border: none;
+    background: none;
+    padding: 0;
+    cursor: pointer;
+}
+
+.empty-state,
+.empty {
+    padding: 28px;
+    border-radius: var(--radius-md);
+    text-align: center;
+    color: var(--text-soft);
+}
+
+.card-grid,
+.panel-grid,
+.metrics-grid,
+.grid {
+    display: grid;
+    gap: 18px;
+}
+
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: var(--overlay);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    backdrop-filter: blur(0);
+    transition: opacity var(--transition-mid), backdrop-filter var(--transition-mid), visibility 0s linear var(--transition-mid);
+    z-index: 1000;
+}
+
+.modal-overlay.active {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    backdrop-filter: blur(6px);
+    transition: opacity var(--transition-mid), backdrop-filter var(--transition-mid), visibility 0s linear 0s;
+}
+
+.modal {
+    width: min(540px, 100%);
+    border-radius: var(--radius-lg);
+    padding: 28px;
+    opacity: 0;
+    transform: translateY(24px) scale(0.98);
+    transition: transform var(--transition-mid), opacity var(--transition-mid), box-shadow var(--transition-mid);
+}
+
+.modal-overlay.active .modal {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+}
+
+.action-modal {
+    width: min(460px, 100%);
+}
+
+.modal-close-button {
+    width: 42px;
+    min-width: 42px;
+    min-height: 42px;
+    padding: 0;
+    flex-shrink: 0;
+    line-height: 0;
+}
+
+.modal-close-icon {
+    display: inline-flex;
+    width: 18px;
+    height: 18px;
+}
+
+.modal-close-icon svg {
+    width: 18px;
+    height: 18px;
+}
+
+.form-row,
+.actions,
+.toolbar,
+.inline-actions,
+.modal-actions,
+.modal-result-actions,
+.link-actions,
+.file-actions,
+.nav-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+@media (max-width: 768px) {
+    .form-row,
+    .actions,
+    .toolbar,
+    .inline-actions,
+    .modal-actions,
+    .modal-result-actions,
+    .link-actions,
+    .file-actions,
+    .nav-actions {
+        align-items: stretch;
+    }
+
+    .button,
+    button,
+    .button-link {
+        width: 100%;
+    }
+}

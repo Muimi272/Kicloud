@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KiCloud 管理员后台</title>
+    <link rel="stylesheet" href="/css/theme.css">
+    <link rel="stylesheet" href="/css/base.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/pages.css">
+    <script src="/js/app.js"></script>
+</head>
+<body>
+<div class="app-layout admin-layout">
+    <aside class="sidebar surface" data-mobile-collapsible data-mobile-open="false">
+        <div class="sidebar-top">
+            <div>
+                <div class="section-eyebrow">Admin Console</div>
+                <div class="brand-mark">KiCloud</div>
+                <p class="muted">管理员控制台。</p>
+            </div>
+            <div class="top-nav-quick-actions">
+                <button class="theme-toggle" type="button" data-theme-toggle>
+                    <span class="theme-toggle-icon" data-theme-icon aria-hidden="true"></span>
+                    <span class="sr-only" data-theme-label>切换主题</span>
+                </button>
+                <button class="mobile-icon-toggle mobile-nav-toggle" type="button" data-mobile-collapse-button aria-label="展开后台导航" title="展开后台导航">
+                    <span class="mobile-icon-toggle-mark" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" focusable="false">
+                            <path d="M5 8h14M5 12h14M5 16h14" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.8"/>
+                        </svg>
+                    </span>
+                    <span class="sr-only">展开后台导航</span>
+                </button>
+            </div>
+        </div>
+        <div class="sidebar-mobile-controls" data-mobile-collapse-content>
+            <div class="sidebar-mobile-content">
+                <div class="sidebar-nav">
+                    <button class="nav-item active" data-panel-target="users-panel" type="button">用户管理</button>
+                    <button class="nav-item" data-panel-target="invitations-panel" type="button">邀请码管理</button>
+                    <button class="nav-item" id="go-dashboard" type="button">返回用户首页</button>
+                    <button class="nav-item" id="logout-button" type="button">退出登录</button>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <main class="main-column">
+        <section class="dashboard-card surface">
+            <div class="page-header">
+                <div>
+                    <div class="section-eyebrow">Operations</div>
+                    <h1 class="section-title">管理员后台</h1>
+                    <p class="subtitle">左侧切换模块，用户详情将在右侧抽屉中展开查看和修改。</p>
+                </div>
+                <div class="nav-actions">
+                    <div class="meta">用户：<span id="user-count">-</span></div>
+                    <div class="meta">邀请码：<span id="invitation-count">-</span></div>
+                    <button class="primary-button" id="refresh-all-button" type="button">刷新数据</button>
+                </div>
+            </div>
+            <div id="admin-message" class="status-message"></div>
+        </section>
+
+        <section class="panel active" id="users-panel">
+            <section class="content-card surface">
+                <div class="page-header">
+                    <div>
+                        <h2 class="panel-title">用户列表</h2>
+                    </div>
+                </div>
+                <div id="users-message" class="status-message section-gap-md"></div>
+                <div id="users-table-wrap"></div>
+            </section>
+        </section>
+
+        <section class="panel" id="invitations-panel">
+            <section class="content-card surface">
+                <div class="page-header">
+                    <div>
+                        <h2 class="panel-title">邀请码列表</h2>
+                    </div>
+                    <div class="nav-actions">
+                        <button class="primary-button" id="create-invitation-button" type="button">生成邀请码</button>
+                    </div>
+                </div>
+                <div id="invitations-message" class="status-message section-gap-md"></div>
+                <div id="latest-invitation-message" class="status-message section-gap-md"></div>
+                <div id="invitations-table-wrap"></div>
+            </section>
+        </section>
+    </main>
+</div>
+
+<div class="drawer-overlay" id="user-detail-overlay">
+    <aside class="detail-drawer surface" id="user-detail-drawer" aria-labelledby="user-detail-title">
+        <div class="detail-drawer-header">
+            <div>
+                <div class="section-eyebrow">User Detail</div>
+                <h2 class="detail-title" id="user-detail-title">用户详情</h2>
+            </div>
+            <button class="secondary-button" id="close-user-detail" type="button">关闭</button>
+        </div>
+        <div id="user-detail-message" class="status-message section-gap-md"></div>
+        <div id="user-detail-content" class="empty-state">请选择一个用户以查看详细信息。</div>
+    </aside>
+</div>
+
+<div class="drawer-overlay" id="invitation-detail-overlay">
+    <aside class="detail-drawer surface" id="invitation-detail-drawer" aria-labelledby="invitation-detail-title">
+        <div class="detail-drawer-header">
+            <div>
+                <div class="section-eyebrow">Invitation Detail</div>
+                <h2 class="detail-title" id="invitation-detail-title">邀请码详情</h2>
+            </div>
+            <button class="secondary-button" id="close-invitation-detail" type="button">关闭</button>
+        </div>
+        <div id="invitation-detail-message" class="status-message section-gap-md"></div>
+        <div id="invitation-detail-content" class="empty-state">请选择一个邀请码以查看详细信息。</div>
+    </aside>
+</div>
+
+<script>
+    const state = { users: [], invitations: [], selectedUserId: null, selectedInvitationId: null, latestInvitationCode: '' };
+    const usersTableWrap = document.getElementById('users-table-wrap');
+    const invitationsTableWrap = document.getElementById('invitations-table-wrap');
+    const userDetailContent = document.getElementById('user-detail-content');
+    const invitationDetailContent = document.getElementById('invitation-detail-content');
+    const userCount = document.getElementById('user-count');
+    const invitationCount = document.getElementById('invitation-count');
+    const refreshAllButton = document.getElementById('refresh-all-button');
+    const createInvitationButton = document.getElementById('create-invitation-button');
+    const logoutButton = document.getElementById('logout-button');
+    const goDashboardButton = document.getElementById('go-dashboard');
+    const adminMessage = document.getElementById('admin-message');
+    const userDetailOverlay = document.getElementById('user-detail-overlay');
+    const closeUserDetailButton = document.getElementById('close-user-detail');
+    const invitationDetailOverlay = document.getElementById('invitation-detail-overlay');
+    const closeInvitationDetailButton = document.getElementById('close-invitation-detail');
+    const panelButtons = document.querySelectorAll('[data-panel-target]');
+    const { requestJson, formatSize, syncMobileCollapsibles } = window.KiCloudApp;
+
+    function setMessage(elementId, text, type) {
+        const element = document.getElementById(elementId);
+        if (!element) {
+            return;
+        }
+        element.textContent = text || '';
+        element.className = 'status-message' + (type ? ' ' + type : '');
+    }
+
+    const MB = 1024 * 1024;
+    const GB = 1024 * MB;
+
+    function formatValue(value) { return value === null || value === undefined || value === '' ? '-' : String(value); }
+    function formatBoolean(value, trueText, falseText) { return value ? trueText : falseText; }
+    function buildStatusPill(text, type) { return '<span class="status-pill ' + type + '">' + text + '</span>'; }
+    function buildCollapsibleBlock(title, content, openOnMobile) {
+        return `
+            <div class="form-block form-block-collapsible" data-mobile-collapsible data-mobile-open="${openOnMobile ? 'true' : 'false'}">
+                <button class="mobile-section-toggle form-block-toggle" type="button" data-mobile-collapse-button>
+                    <span class="form-block-title">${title}</span>
+                    <span class="mobile-collapse-chevron" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" focusable="false">
+                            <path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"/>
+                        </svg>
+                    </span>
+                </button>
+                <div class="form-block-content" data-mobile-collapse-content>${content}</div>
+            </div>
+        `;
+    }
+    function formatAdminSpace(value) {
+        if (value === null || value === undefined || value === '') {
+            return '-';
+        }
+        const bytes = Number(value);
+        if (!Number.isFinite(bytes)) {
+            return '-';
+        }
+        const unit = bytes >= GB ? 'GB' : 'MB';
+        const base = unit === 'GB' ? GB : MB;
+        const amount = bytes / base;
+        return `${amount.toFixed(amount >= 10 ? 1 : 2)} ${unit}`;
+    }
+    function getSpaceEditorValue(bytes) {
+        if (bytes === null || bytes === undefined || bytes === '') {
+            return { value: '', unit: 'GB' };
+        }
+        const numeric = Number(bytes);
+        if (!Number.isFinite(numeric) || numeric < 0) {
+            return { value: '', unit: 'GB' };
+        }
+        const unit = numeric >= GB ? 'GB' : 'MB';
+        const base = unit === 'GB' ? GB : MB;
+        const amount = numeric / base;
+        return { value: Number(amount.toFixed(amount >= 10 ? 1 : 2)), unit };
+    }
+    function parseSpaceInputToBytes(value, unit) {
+        const numeric = Number(value);
+        if (!Number.isFinite(numeric) || numeric < 0) {
+            throw new Error('请输入有效的容量大小。');
+        }
+        const base = unit === 'GB' ? GB : MB;
+        return Math.round(numeric * base);
+    }
+
+    function openUserDetailDrawer() {
+        userDetailOverlay.classList.add('active');
+        document.body.classList.add('drawer-open');
+    }
+
+    function closeUserDetailDrawer() {
+        userDetailOverlay.classList.remove('active');
+        if (!invitationDetailOverlay.classList.contains('active')) {
+            document.body.classList.remove('drawer-open');
+        }
+    }
+
+    function openInvitationDetailDrawer() {
+        invitationDetailOverlay.classList.add('active');
+        document.body.classList.add('drawer-open');
+    }
+
+    function closeInvitationDetailDrawer() {
+        invitationDetailOverlay.classList.remove('active');
+        if (!userDetailOverlay.classList.contains('active')) {
+            document.body.classList.remove('drawer-open');
+        }
+    }
+
+    async function apiGet(url) {
+        const result = await requestJson(url);
+        if (result.code !== 1) { throw new Error(result.msg || 'Request failed.'); }
+        return result;
+    }
+
+    async function apiPost(url, body) {
+        const result = await requestJson(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+        if (result.code !== 1) { throw new Error(result.msg || 'Request failed.'); }
+        return result;
+    }
+
+    function renderUsers() {
+        userCount.textContent = String(state.users.length);
+        if (!state.users.length) {
+            usersTableWrap.innerHTML = '<div class="empty-state">当前没有用户数据。</div>';
+            return;
+        }
+        const rows = state.users.map((user) => {
+            const enabledText = user.enabled ? buildStatusPill('启用', 'ok') : buildStatusPill('禁用', 'off');
+            const roleText = buildStatusPill(formatValue(user.role), 'neutral');
+            return `
+                <tr>
+                    <td data-label="ID" data-cell-primary="true">${formatValue(user.id)}</td>
+                    <td data-label="用户名">${formatValue(user.username)}</td>
+                    <td data-label="角色">${roleText}</td>
+                    <td data-label="状态">${enabledText}</td>
+                    <td data-label="已用空间">${formatAdminSpace(user.usedSpace)}</td>
+                    <td data-label="总空间">${formatAdminSpace(user.totalSpace)}</td>
+                    <td data-label="剩余空间">${formatAdminSpace(user.remainingSpace)}</td>
+                    <td data-label="创建时间">${formatValue(user.createdAt)}</td>
+                    <td data-label="操作">
+                        <div class="inline-actions">
+                            <button class="secondary-button" type="button" onclick="loadUserDetail(${user.id})">查看详情</button>
+                            <button class="secondary-button" type="button" onclick="quickToggleUserStatus(${user.id}, ${user.enabled ? 'false' : 'true'})">${user.enabled ? '禁用' : '启用'}</button>
+                        </div>
+                    </td>
+                </tr>`;
+        }).join('');
+        usersTableWrap.innerHTML = `<div class="table-wrap"><table><thead><tr><th>ID</th><th>用户名</th><th>角色</th><th>状态</th><th>已用空间</th><th>总空间</th><th>剩余空间</th><th>创建时间</th><th>操作</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+    }
+
+    function renderInvitations() {
+        invitationCount.textContent = String(state.invitations.length);
+        if (!state.invitations.length) {
+            invitationsTableWrap.innerHTML = '<div class="empty-state">当前没有邀请码数据。</div>';
+            return;
+        }
+        const rows = state.invitations.map((invitation) => {
+            const validText = invitation.valid ? buildStatusPill('有效', 'ok') : buildStatusPill('禁用', 'off');
+            const usedText = invitation.used ? buildStatusPill('已使用', 'neutral') : buildStatusPill('未使用', 'ok');
+            return `
+                <tr>
+                    <td data-label="ID" data-cell-primary="true">${formatValue(invitation.id)}</td>
+                    <td data-label="邀请码"><code>${formatValue(invitation.inviteCode)}</code></td>
+                    <td data-label="使用状态">${usedText}</td>
+                    <td data-label="有效状态">${validText}</td>
+                    <td data-label="创建者 ID">${formatValue(invitation.generatorId)}</td>
+                    <td data-label="使用者 ID">${formatValue(invitation.userId)}</td>
+                    <td data-label="创建时间">${formatValue(invitation.createdAt)}</td>
+                    <td data-label="操作">
+                        <div class="inline-actions">
+                            <button class="secondary-button" type="button" onclick="loadInvitationDetail(${invitation.id})">查看详情</button>
+                            <button class="secondary-button" type="button" onclick="quickToggleInvitationStatus(${invitation.id}, ${invitation.valid ? 'false' : 'true'})">${invitation.valid ? '禁用' : '恢复'}</button>
+                        </div>
+                    </td>
+                </tr>`;
+        }).join('');
+        invitationsTableWrap.innerHTML = `<div class="table-wrap"><table><thead><tr><th>ID</th><th>邀请码</th><th>使用状态</th><th>有效状态</th><th>创建者 ID</th><th>使用者 ID</th><th>创建时间</th><th>操作</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+    }
+
+    function renderUserDetail(user) {
+        const spaceEditor = getSpaceEditorValue(user.totalSpace);
+        userDetailContent.innerHTML = `
+            <div class="detail-grid">
+                <div class="detail-item"><span class="label">用户 ID</span><span class="value">${formatValue(user.id)}</span></div>
+                <div class="detail-item"><span class="label">用户名</span><span class="value">${formatValue(user.username)}</span></div>
+                <div class="detail-item"><span class="label">角色</span><span class="value">${formatValue(user.role)}</span></div>
+                <div class="detail-item"><span class="label">状态</span><span class="value">${formatBoolean(user.enabled, '启用', '禁用')}</span></div>
+                <div class="detail-item"><span class="label">已用空间</span><span class="value">${formatAdminSpace(user.usedSpace)}</span></div>
+                <div class="detail-item"><span class="label">总空间</span><span class="value">${formatAdminSpace(user.totalSpace)}</span></div>
+                <div class="detail-item"><span class="label">剩余空间</span><span class="value">${formatAdminSpace(user.remainingSpace)}</span></div>
+                <div class="detail-item"><span class="label">创建时间</span><span class="value">${formatValue(user.createdAt)}</span></div>
+            </div>
+            ${user.role === 'SUPERADMIN' ? '' : buildCollapsibleBlock('查看用户文件', `<div class="form-row"><input id="detail-storage-keyword" type="text" placeholder="按名称搜索该用户文件"><button class="secondary-button" type="button" onclick="loadUserFiles(${user.id})">加载文件</button><button class="secondary-button" type="button" onclick="searchUserFiles(${user.id})">搜索文件</button></div><div id="user-storage-message" class="status-message section-gap-md"></div><div id="user-storage-content" class="empty-state">点击“加载文件”后查看该用户根目录文件。</div>`, false)}
+            ${buildCollapsibleBlock('修改用户名', `<div class="form-row"><input id="detail-username" type="text" placeholder="输入新用户名" value="${formatValue(user.username) === '-' ? '' : user.username}"><button class="primary-button" type="button" onclick="submitUsernameChange(${user.id})">保存用户名</button></div>`, false)}
+            ${buildCollapsibleBlock('修改密码', `<div class="form-row"><input id="detail-password" type="text" placeholder="输入新密码"><button class="primary-button" type="button" onclick="submitPasswordChange(${user.id})">保存密码</button></div>`, false)}
+            ${buildCollapsibleBlock('修改角色', `<div class="form-row"><select id="detail-role"><option value="USER" ${user.role === 'USER' ? 'selected' : ''}>USER</option><option value="ADMIN" ${user.role === 'ADMIN' ? 'selected' : ''}>ADMIN</option><option value="SUPERADMIN" ${user.role === 'SUPERADMIN' ? 'selected' : ''}>SUPERADMIN</option></select><button class="primary-button" type="button" onclick="submitRoleChange(${user.id})">保存角色</button></div>`, false)}
+            ${buildCollapsibleBlock('修改状态', `<div class="form-row"><select id="detail-enabled"><option value="true" ${user.enabled ? 'selected' : ''}>启用</option><option value="false" ${!user.enabled ? 'selected' : ''}>禁用</option></select><button class="primary-button" type="button" onclick="submitStatusChange(${user.id})">保存状态</button></div>`, false)}
+            ${buildCollapsibleBlock('修改容量', `<div class="form-row"><input id="detail-total-space" type="number" min="0" step="0.01" placeholder="输入总容量" value="${spaceEditor.value}"><select id="detail-total-space-unit"><option value="MB" ${spaceEditor.unit === 'MB' ? 'selected' : ''}>MB</option><option value="GB" ${spaceEditor.unit === 'GB' ? 'selected' : ''}>GB</option></select><button class="primary-button" type="button" onclick="submitSpaceChange(${user.id})">保存容量</button></div>`, false)}`;
+        syncMobileCollapsibles(userDetailContent);
+    }
+
+    function renderUserStorageFiles(result) {
+        const owner = result.data?.owner || {};
+        const files = result.data?.files || [];
+        const title = owner.username ? `正在查看 ${owner.username} 的文件` : '文件列表';
+        if (!files.length) {
+            return `<div class="detail-item"><span class="label">${title}</span><span class="value">当前没有文件或文件夹。</span></div>`;
+        }
+        const rows = files.map((file) => `<tr><td data-label="ID" data-cell-primary="true">${formatValue(file.id)}</td><td data-label="名称">${formatValue(file.name)}</td><td data-label="类型">${formatValue(file.fileType)}</td><td data-label="大小">${formatSize(file.size)}</td><td data-label="父目录">${formatValue(file.parentId)}</td><td data-label="创建时间">${formatValue(file.createdAt)}</td></tr>`).join('');
+        return `<div class="detail-item detail-item-spaced"><span class="label">${title}</span><span class="value">已用 ${formatAdminSpace(owner.usedSpace)} / 总量 ${formatAdminSpace(owner.totalSpace)} / 剩余 ${formatAdminSpace(owner.remainingSpace)}</span></div><div class="table-wrap"><table><thead><tr><th>ID</th><th>名称</th><th>类型</th><th>大小</th><th>父目录</th><th>创建时间</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+    }
+
+    function renderInvitationDetail(invitation) {
+        invitationDetailContent.innerHTML = `<div class="detail-grid"><div class="detail-item"><span class="label">邀请码 ID</span><span class="value">${formatValue(invitation.id)}</span></div><div class="detail-item"><span class="label">邀请码</span><span class="value"><code>${formatValue(invitation.inviteCode)}</code></span></div><div class="detail-item"><span class="label">是否已使用</span><span class="value">${formatBoolean(invitation.used, '已使用', '未使用')}</span></div><div class="detail-item"><span class="label">是否有效</span><span class="value">${formatBoolean(invitation.valid, '有效', '禁用')}</span></div><div class="detail-item"><span class="label">创建者 ID</span><span class="value">${formatValue(invitation.generatorId)}</span></div><div class="detail-item"><span class="label">使用者 ID</span><span class="value">${formatValue(invitation.userId)}</span></div><div class="detail-item"><span class="label">创建时间</span><span class="value">${formatValue(invitation.createdAt)}</span></div><div class="detail-item"><span class="label">使用时间</span><span class="value">${formatValue(invitation.usedAt)}</span></div></div>${buildCollapsibleBlock('修改邀请码状态', `<div class="form-row"><select id="detail-invitation-valid"><option value="true" ${invitation.valid ? 'selected' : ''}>有效</option><option value="false" ${!invitation.valid ? 'selected' : ''}>禁用</option></select><button class="primary-button" type="button" onclick="submitInvitationStatusChange(${invitation.id})">保存状态</button></div><p class="muted">已使用的邀请码不能恢复为可用状态。</p>`, false)}`;
+        syncMobileCollapsibles(invitationDetailContent);
+    }
+
+    async function loadUsers() { setMessage('users-message', '正在加载用户列表...', ''); try { const result = await apiGet('/admin/users'); state.users = result.data.users || []; renderUsers(); setMessage('users-message', '用户列表已刷新。', 'success'); } catch (error) { state.users = []; renderUsers(); setMessage('users-message', error.message || '加载用户列表失败。', 'error'); } }
+    async function loadInvitations() { setMessage('invitations-message', '正在加载邀请码列表...', ''); try { const result = await apiGet('/admin/invitations'); state.invitations = result.data.invitations || []; renderInvitations(); setMessage('invitations-message', '邀请码列表已刷新。', 'success'); } catch (error) { state.invitations = []; renderInvitations(); setMessage('invitations-message', error.message || '加载邀请码列表失败。', 'error'); } }
+    async function loadUserDetail(userId) { state.selectedUserId = userId; openUserDetailDrawer(); setMessage('user-detail-message', '正在加载用户详情...', ''); try { const result = await apiGet('/admin/user/' + userId); renderUserDetail(result.data.user); setMessage('user-detail-message', '用户详情已加载。', 'success'); } catch (error) { userDetailContent.innerHTML = '<div class="empty-state">加载用户详情失败。</div>'; setMessage('user-detail-message', error.message || '加载用户详情失败。', 'error'); } }
+    async function loadUserFiles(userId) { setMessage('user-storage-message', '正在加载该用户上传内容...', ''); try { const result = await apiGet('/admin/user/' + userId + '/files'); document.getElementById('user-storage-content').innerHTML = renderUserStorageFiles(result); setMessage('user-storage-message', result.msg || '用户文件已加载。', 'success'); } catch (error) { const container = document.getElementById('user-storage-content'); if (container) { container.innerHTML = '<div class="empty-state">加载该用户文件失败。</div>'; } setMessage('user-storage-message', error.message || '加载该用户文件失败。', 'error'); } }
+    async function searchUserFiles(userId) { const keywordInput = document.getElementById('detail-storage-keyword'); const keyword = keywordInput ? keywordInput.value.trim() : ''; if (!keyword) { await loadUserFiles(userId); return; } setMessage('user-storage-message', '正在搜索该用户文件...', ''); try { const result = await apiGet('/admin/user/' + userId + '/files/search?keyword=' + encodeURIComponent(keyword)); document.getElementById('user-storage-content').innerHTML = renderUserStorageFiles(result); setMessage('user-storage-message', result.msg || '用户文件搜索完成。', 'success'); } catch (error) { const container = document.getElementById('user-storage-content'); if (container) { container.innerHTML = '<div class="empty-state">搜索该用户文件失败。</div>'; } setMessage('user-storage-message', error.message || '搜索该用户文件失败。', 'error'); } }
+    async function loadInvitationDetail(invitationId) { state.selectedInvitationId = invitationId; openInvitationDetailDrawer(); setMessage('invitation-detail-message', '正在加载邀请码详情...', ''); try { const result = await apiGet('/admin/invitation/' + invitationId); renderInvitationDetail(result.data.invitation); setMessage('invitation-detail-message', '邀请码详情已加载。', 'success'); } catch (error) { invitationDetailContent.innerHTML = '<div class="empty-state">加载邀请码详情失败。</div>'; setMessage('invitation-detail-message', error.message || '加载邀请码详情失败。', 'error'); } }
+    async function refreshAll() { refreshAllButton.disabled = true; try { await Promise.all([loadUsers(), loadInvitations()]); if (state.selectedUserId && userDetailOverlay.classList.contains('active')) { await loadUserDetail(state.selectedUserId); } if (state.selectedInvitationId && invitationDetailOverlay.classList.contains('active')) { await loadInvitationDetail(state.selectedInvitationId); } } finally { refreshAllButton.disabled = false; } }
+    async function submitUsernameChange(userId) { const username = document.getElementById('detail-username').value; try { const result = await apiPost('/admin/user/username', { userId, username }); setMessage('user-detail-message', result.msg || '用户名已更新。', 'success'); await loadUsers(); await loadUserDetail(userId); } catch (error) { setMessage('user-detail-message', error.message || '修改用户名失败。', 'error'); } }
+    async function submitPasswordChange(userId) { const password = document.getElementById('detail-password').value; try { const result = await apiPost('/admin/user/password', { userId, password }); setMessage('user-detail-message', result.msg || '密码已更新。', 'success'); document.getElementById('detail-password').value = ''; await loadUserDetail(userId); } catch (error) { setMessage('user-detail-message', error.message || '修改密码失败。', 'error'); } }
+    async function submitRoleChange(userId) { const role = document.getElementById('detail-role').value; try { const result = await apiPost('/admin/user/role', { userId, role }); setMessage('user-detail-message', result.msg || '角色已更新。', 'success'); await loadUsers(); await loadUserDetail(userId); } catch (error) { setMessage('user-detail-message', error.message || '修改角色失败。', 'error'); } }
+    async function submitStatusChange(userId) { const enabled = document.getElementById('detail-enabled').value === 'true'; try { const result = await apiPost('/admin/user/status', { userId, enabled }); setMessage('user-detail-message', result.msg || '状态已更新。', 'success'); await loadUsers(); await loadUserDetail(userId); } catch (error) { setMessage('user-detail-message', error.message || '修改状态失败。', 'error'); } }
+    async function submitSpaceChange(userId) { try { const totalSpace = parseSpaceInputToBytes(document.getElementById('detail-total-space').value, document.getElementById('detail-total-space-unit').value); const result = await apiPost('/admin/user/space', { userId, totalSpace }); setMessage('user-detail-message', result.msg || '容量已更新。', 'success'); await loadUsers(); await loadUserDetail(userId); } catch (error) { setMessage('user-detail-message', error.message || '修改容量失败。', 'error'); } }
+    async function quickToggleUserStatus(userId, enabled) { try { const result = await apiPost('/admin/user/status', { userId, enabled }); setMessage('users-message', result.msg || '用户状态已更新。', 'success'); await loadUsers(); if (state.selectedUserId === userId && userDetailOverlay.classList.contains('active')) { await loadUserDetail(userId); } } catch (error) { setMessage('users-message', error.message || '修改用户状态失败。', 'error'); } }
+    async function createInvitation() { createInvitationButton.disabled = true; try { const result = await requestJson('/admin/invite', { method: 'POST' }); if (result.code !== 1) { throw new Error(result.msg || '生成邀请码失败。'); } state.latestInvitationCode = result['invitation code'] || ''; setMessage('latest-invitation-message', state.latestInvitationCode ? '新邀请码：' + state.latestInvitationCode : (result.msg || '邀请码已创建。'), 'success'); await loadInvitations(); } catch (error) { setMessage('latest-invitation-message', error.message || '生成邀请码失败。', 'error'); } finally { createInvitationButton.disabled = false; } }
+    async function submitInvitationStatusChange(invitationId) { const valid = document.getElementById('detail-invitation-valid').value === 'true'; try { const result = await apiPost('/admin/invitation/status', { invitationId, valid }); setMessage('invitation-detail-message', result.msg || '邀请码状态已更新。', 'success'); await loadInvitations(); await loadInvitationDetail(invitationId); } catch (error) { setMessage('invitation-detail-message', error.message || '修改邀请码状态失败。', 'error'); } }
+    async function quickToggleInvitationStatus(invitationId, valid) { try { const result = await apiPost('/admin/invitation/status', { invitationId, valid }); setMessage('invitations-message', result.msg || '邀请码状态已更新。', 'success'); await loadInvitations(); if (state.selectedInvitationId === invitationId && invitationDetailOverlay.classList.contains('active')) { await loadInvitationDetail(invitationId); } } catch (error) { setMessage('invitations-message', error.message || '修改邀请码状态失败。', 'error'); } }
+    function activatePanel(panelId) { document.querySelectorAll('.panel').forEach((panel) => { panel.classList.toggle('active', panel.id === panelId); }); panelButtons.forEach((button) => { button.classList.toggle('active', button.getAttribute('data-panel-target') === panelId); }); if (panelId !== 'users-panel') { closeUserDetailDrawer(); } if (panelId !== 'invitations-panel') { closeInvitationDetailDrawer(); } }
+
+    panelButtons.forEach((button) => { button.addEventListener('click', () => activatePanel(button.getAttribute('data-panel-target'))); });
+    refreshAllButton.addEventListener('click', refreshAll);
+    createInvitationButton.addEventListener('click', createInvitation);
+    goDashboardButton.addEventListener('click', () => { window.location.href = '/dashboard'; });
+    closeUserDetailButton.addEventListener('click', closeUserDetailDrawer);
+    closeInvitationDetailButton.addEventListener('click', closeInvitationDetailDrawer);
+    userDetailOverlay.addEventListener('click', (event) => { if (event.target === userDetailOverlay) { closeUserDetailDrawer(); } });
+    invitationDetailOverlay.addEventListener('click', (event) => { if (event.target === invitationDetailOverlay) { closeInvitationDetailDrawer(); } });
+    document.addEventListener('keydown', (event) => { if (event.key === 'Escape' && userDetailOverlay.classList.contains('active')) { closeUserDetailDrawer(); } if (event.key === 'Escape' && invitationDetailOverlay.classList.contains('active')) { closeInvitationDetailDrawer(); } });
+    logoutButton.addEventListener('click', async () => { setMessage(adminMessage, '', ''); logoutButton.disabled = true; try { const result = await requestJson('/user/logout', { method: 'POST' }); if (result.code === 1) { setMessage(adminMessage, result.msg || '退出成功。', 'success'); window.location.href = '/user/login'; return; } setMessage(adminMessage, result.msg || '退出失败，请稍后重试。', 'error'); } catch (error) { setMessage(adminMessage, '退出失败，请稍后重试。', 'error'); } finally { logoutButton.disabled = false; } });
+
+    window.loadUserDetail = loadUserDetail;
+    window.loadInvitationDetail = loadInvitationDetail;
+    window.loadUserFiles = loadUserFiles;
+    window.searchUserFiles = searchUserFiles;
+    window.submitUsernameChange = submitUsernameChange;
+    window.submitPasswordChange = submitPasswordChange;
+    window.submitRoleChange = submitRoleChange;
+    window.submitStatusChange = submitStatusChange;
+    window.submitSpaceChange = submitSpaceChange;
+    window.quickToggleUserStatus = quickToggleUserStatus;
+    window.submitInvitationStatusChange = submitInvitationStatusChange;
+    window.quickToggleInvitationStatus = quickToggleInvitationStatus;
+
+    activatePanel('users-panel');
+    syncMobileCollapsibles();
+    refreshAll();
+</script>
+</body>
+</html>
