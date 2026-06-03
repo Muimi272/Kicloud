@@ -13,11 +13,19 @@ public class Slices {
     @Getter
     private final Long ownerId;
     @Getter
+    private final String uploadId;
+    @Getter
+    private final String fileName;
+    @Getter
+    private final Long parentId;
+    @Getter
+    private final long totalSize;
+    @Getter
     private final LocalDateTime createdAt = LocalDateTime.now();
     @Getter
     private LocalDateTime updatedAt;
 
-    public Slices(int sliceCount, String fullFileMD5, Long ownerId) {
+    public Slices(int sliceCount, String fullFileMD5, Long ownerId, String uploadId, String fileName, Long parentId, long totalSize) {
         this.slicesMap = new HashMap<>();
         for (int i = 0; i < sliceCount; i++) {
             slicesMap.put(i, new Slice());
@@ -25,6 +33,10 @@ public class Slices {
         this.count = sliceCount;
         this.fullFileMD5 = fullFileMD5;
         this.ownerId = ownerId;
+        this.uploadId = uploadId;
+        this.fileName = fileName;
+        this.parentId = parentId;
+        this.totalSize = totalSize;
         updatedAt = createdAt;
     }
 
@@ -45,6 +57,18 @@ public class Slices {
             if (!slice.isDone()) return false;
         }
         return true;
+    }
+
+    public boolean containsSlice(int sliceNum) {
+        return sliceNum >= 0 && sliceNum < count;
+    }
+
+    public Slice getSlice(int sliceNum) {
+        return slicesMap.get(sliceNum);
+    }
+
+    public boolean isExpired(LocalDateTime now) {
+        return !now.isBefore(createdAt.plusMinutes(20)) || !now.isBefore(updatedAt.plusMinutes(2));
     }
 
     public List<Slice> getSlices() {

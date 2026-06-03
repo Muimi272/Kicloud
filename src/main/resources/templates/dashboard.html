@@ -76,7 +76,7 @@
                         </button>
                         <div class="mobile-section-content" data-mobile-collapse-content>
                             <form id="upload-form" class="stack-form">
-                                <input id="upload-file" name="file" type="file" required>
+                                <input id="upload-file" name="file" type="file" multiple required>
                                 <button class="primary-button" id="upload-button" type="submit">上传到当前目录</button>
                             </form>
                         </div>
@@ -281,6 +281,19 @@
     const folderPath = [{ id: null, name: '根目录' }];
     let hasLoadedLinks = false;
     const actionModalState = { onConfirm: null };
+    const SLICE_UPLOAD_THRESHOLD = 10 * 1024 * 1024;
+    const SLICE_SIZE = 5 * 1024 * 1024;
+    const MAX_SLICE_UPLOAD_RETRIES = 5;
+    const MD5_SHIFT_AMOUNTS = [
+        7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22,
+        5, 9, 14, 20, 5, 9, 14, 20, 5, 9, 14, 20, 5, 9, 14, 20,
+        4, 11, 16, 23, 4, 11, 16, 23, 4, 11, 16, 23, 4, 11, 16, 23,
+        6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21
+    ];
+    const MD5_CONSTANTS = Array.from(
+        { length: 64 },
+        (_, index) => Math.floor(Math.abs(Math.sin(index + 1)) * 0x100000000) >>> 0
+    );
 
     function activatePanel(panelId) {
         document.querySelectorAll('.panel').forEach((panel) => {
@@ -558,23 +571,242 @@
         }
     }
 
-    async function uploadFile() {
-        const file = uploadFileInput.files[0];
-        if (!file) {
-            setMessage(messageBox, '请先选择要上传的文件。', 'error');
-            return;
+    function leftRotate(value, shift) {
+        return ((value << shift) | (value >>> (32 - shift))) >>> 0;
+    }
+
+    function md5Cycle(state, block) {
+        const words = new Array(16);
+        for (let index = 0; index < 16; index += 1) {
+            const offset = index * 4;
+            words[index] = (
+                block[offset]
+                | (block[offset + 1] << 8)
+                | (block[offset + 2] << 16)
+                | (block[offset + 3] << 24)
+            ) >>> 0;
         }
+
+        let [a, b, c, d] = state;
+        for (let index = 0; index < 64; index += 1) {
+            let f;
+            let g;
+            if (index < 16) {
+                f = (b & c) | (~b & d);
+                g = index;
+            } else if (index < 32) {
+                f = (d & b) | (~d & c);
+                g = (5 * index + 1) % 16;
+            } else if (index < 48) {
+                f = b ^ c ^ d;
+                g = (3 * index + 5) % 16;
+            } else {
+                f = c ^ (b | ~d);
+                g = (7 * index) % 16;
+            }
+
+            const nextD = d;
+            d = c;
+            c = b;
+            const sum = (a + f + MD5_CONSTANTS[index] + words[g]) >>> 0;
+            b = (b + leftRotate(sum, MD5_SHIFT_AMOUNTS[index])) >>> 0;
+            a = nextD;
+        }
+
+        state[0] = (state[0] + a) >>> 0;
+        state[1] = (state[1] + b) >>> 0;
+        state[2] = (state[2] + c) >>> 0;
+        state[3] = (state[3] + d) >>> 0;
+    }
+
+    function md5StateToHex(state) {
+        return state.map((word) => {
+            let hex = '';
+            for (let index = 0; index < 4; index += 1) {
+                const byte = (word >>> (index * 8)) & 0xff;
+                hex += byte.toString(16).padStart(2, '0');
+            }
+            return hex;
+        }).join('');
+    }
+
+    function createMd5Hasher() {
+        const state = [1732584193, 4023233417, 2562383102, 271733878];
+        let remainder = new Uint8Array(0);
+        let totalLength = 0;
+
+        return {
+            append(arrayBuffer) {
+                const chunk = new Uint8Array(arrayBuffer);
+                totalLength += chunk.length;
+
+                const combined = new Uint8Array(remainder.length + chunk.length);
+                combined.set(remainder, 0);
+                combined.set(chunk, remainder.length);
+
+                let offset = 0;
+                while (offset + 64 <= combined.length) {
+                    md5Cycle(state, combined.subarray(offset, offset + 64));
+                    offset += 64;
+                }
+                remainder = combined.slice(offset);
+            },
+            end() {
+                const paddingLength = remainder.length < 56 ? 56 - remainder.length : 120 - remainder.length;
+                const finalBuffer = new Uint8Array(remainder.length + paddingLength + 8);
+                finalBuffer.set(remainder, 0);
+                finalBuffer[remainder.length] = 0x80;
+
+                const bitLength = BigInt(totalLength) * 8n;
+                for (let index = 0; index < 8; index += 1) {
+                    finalBuffer[finalBuffer.length - 8 + index] = Number((bitLength >> BigInt(index * 8)) & 0xffn);
+                }
+
+                for (let offset = 0; offset < finalBuffer.length; offset += 64) {
+                    md5Cycle(state, finalBuffer.subarray(offset, offset + 64));
+                }
+                return md5StateToHex(state);
+            }
+        };
+    }
+
+    async function calculateFileMd5(file, onProgress) {
+        const hasher = createMd5Hasher();
+        const chunkCount = Math.max(1, Math.ceil(file.size / SLICE_SIZE));
+        for (let index = 0; index < chunkCount; index += 1) {
+            const start = index * SLICE_SIZE;
+            const end = Math.min(file.size, start + SLICE_SIZE);
+            const chunk = file.slice(start, end);
+            hasher.append(await chunk.arrayBuffer());
+            if (onProgress) {
+                onProgress(index + 1, chunkCount);
+            }
+        }
+        return hasher.end();
+    }
+
+    async function uploadSingleFile(file) {
         const formData = new FormData();
         formData.append('file', file);
         if (currentParentId !== null) {
             formData.append('parentId', currentParentId);
         }
+
         const result = await requestJson('/storage/upload', { method: 'POST', body: formData });
         if (result.code !== 1) {
-            setMessage(messageBox, result.msg || '上传失败。', 'error');
+            throw new Error(result.msg || '上传失败。');
+        }
+        return result;
+    }
+
+    async function uploadSliceFile(file, uploadId, fileMd5, sliceNum, sliceBlob) {
+        const formData = new FormData();
+        formData.append('uploadId', uploadId);
+        formData.append('fullFileMD5', fileMd5);
+        formData.append('sliceNum', String(sliceNum));
+        formData.append('size', String(sliceBlob.size));
+        formData.append('slice', sliceBlob, `${file.name}.part${sliceNum}`);
+        return requestJson('/storage/uploadSlice', { method: 'POST', body: formData });
+    }
+
+    async function uploadSliceWithRetry(file, uploadId, fileMd5, sliceNum, sliceCount, sliceBlob) {
+        let lastErrorMessage = `分片 ${sliceNum + 1} 上传失败。`;
+        for (let attempt = 1; attempt <= MAX_SLICE_UPLOAD_RETRIES; attempt += 1) {
+            if (attempt === 1) {
+                setMessage(messageBox, `正在上传分片 ${sliceNum + 1}/${sliceCount}...`, '');
+            } else {
+                setMessage(
+                    messageBox,
+                    `分片 ${sliceNum + 1}/${sliceCount} 上传失败，正在重试（${attempt}/${MAX_SLICE_UPLOAD_RETRIES}）...`,
+                    ''
+                );
+            }
+
+            try {
+                const result = await uploadSliceFile(file, uploadId, fileMd5, sliceNum, sliceBlob);
+                if (result.code !== 1) {
+                    lastErrorMessage = result.msg || `分片 ${sliceNum + 1} 上传失败。`;
+                    continue;
+                }
+                return result;
+            } catch (error) {
+                lastErrorMessage = error.message || `分片 ${sliceNum + 1} 上传失败。`;
+            }
+        }
+
+        throw new Error(lastErrorMessage);
+    }
+
+    async function uploadFileInSlices(file) {
+        const sliceCount = Math.ceil(file.size / SLICE_SIZE);
+
+        setMessage(messageBox, '正在计算文件 MD5...', '');
+        const fileMd5 = await calculateFileMd5(file, (current, total) => {
+            setMessage(messageBox, `正在计算文件 MD5（${current}/${total}）...`, '');
+        });
+
+        setMessage(messageBox, '正在创建分片上传任务...', '');
+        const startResult = await requestJson('/storage/uploadSlices', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                sliceCount,
+                fullFileMD5: fileMd5,
+                fileName: file.name,
+                parentId: currentParentId,
+                totalSize: file.size
+            })
+        });
+        if (startResult.code !== 1) {
+            throw new Error(startResult.msg || '初始化分片上传失败。');
+        }
+        const uploadId = startResult.data?.uploadId;
+        if (!uploadId) {
+            throw new Error('初始化分片上传失败。');
+        }
+
+        let finalResult = null;
+        for (let index = 0; index < sliceCount; index += 1) {
+            const start = index * SLICE_SIZE;
+            const end = Math.min(file.size, start + SLICE_SIZE);
+            const sliceBlob = file.slice(start, end);
+            const result = await uploadSliceWithRetry(file, uploadId, fileMd5, index, sliceCount, sliceBlob);
+            finalResult = result;
+        }
+
+        if (!finalResult || finalResult.code !== 1 || !finalResult.data?.file) {
+            throw new Error(finalResult?.msg || '分片上传未完成。');
+        }
+        return finalResult;
+    }
+
+    async function uploadFile() {
+        const files = Array.from(uploadFileInput.files || []);
+        if (!files.length) {
+            setMessage(messageBox, '请先选择要上传的文件。', 'error');
             return;
         }
-        setMessage(messageBox, result.msg || '上传成功。', 'success');
+
+        const successMessages = [];
+        for (let index = 0; index < files.length; index += 1) {
+            const file = files[index];
+            try {
+                setMessage(messageBox, `正在上传文件 ${index + 1}/${files.length}：${file.name}`, '');
+                const result = file.size > SLICE_UPLOAD_THRESHOLD
+                    ? await uploadFileInSlices(file)
+                    : await uploadSingleFile(file);
+                successMessages.push(result.msg || `${file.name} 上传成功。`);
+            } catch (error) {
+                setMessage(messageBox, `${file.name} 上传失败：${error.message || '上传失败。'}`, 'error');
+                return;
+            }
+        }
+
+        setMessage(
+            messageBox,
+            files.length === 1 ? successMessages[0] : `已完成 ${files.length} 个文件的上传。`,
+            'success'
+        );
         uploadForm.reset();
         await loadDirectory(currentParentId);
     }

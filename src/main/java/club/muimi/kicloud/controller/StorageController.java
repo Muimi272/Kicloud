@@ -4,6 +4,8 @@ import club.muimi.kicloud.model.CreateFolderRequest;
 import club.muimi.kicloud.model.DeleteStorageFileRequest;
 import club.muimi.kicloud.model.LoginUser;
 import club.muimi.kicloud.model.RenameStorageFileRequest;
+import club.muimi.kicloud.model.UploadSliceRequest;
+import club.muimi.kicloud.model.UploadSlicesRequest;
 import club.muimi.kicloud.service.StorageFileService;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.core.io.Resource;
@@ -35,6 +37,24 @@ public class StorageController {
                                       @RequestParam(value = "parentId", required = false) Long parentId,
                                       HttpSession session) {
         return storageFileService.uploadFile(file, parentId, getLoginUser(session));
+    }
+
+    @PostMapping("/uploadSlices")
+    @ResponseBody
+    public Map<String, Object> uploadSlices(@RequestBody UploadSlicesRequest request, HttpSession session) {
+        if (request == null) {
+            return missingInformation();
+        }
+        return storageFileService.uploadSlices(request, getLoginUser(session));
+    }
+
+    @PostMapping("/uploadSlice")
+    @ResponseBody
+    public Map<String, Object> uploadSlice(UploadSliceRequest request, HttpSession session) {
+        if (request == null) {
+            return missingInformation();
+        }
+        return storageFileService.uploadSlice(request, getLoginUser(session));
     }
 
     @PostMapping("/folder")
